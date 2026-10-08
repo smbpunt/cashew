@@ -1,0 +1,16 @@
+parameters:
+    level: 6
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: true
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+    excludePaths:
+        - tests/bootstrap.php
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    doctrine:
+        allowNullablePropertyForRequiredField: true

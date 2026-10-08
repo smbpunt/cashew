@@ -11,7 +11,7 @@ end_of_line = lf
 indent_style = space
 indent_size = 4
 
-[**/{Dockerfile,Caddyfile,*.sh}]
+[**/{Dockerfile,Caddyfile,*.sh,Makefile,*.mk}]
 indent_style = tab
 
 [{compose.*yaml,.devcontainer/compose.*yaml,.github/**/*.yaml}]
