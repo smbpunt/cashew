@@ -27,6 +27,7 @@ cache-warmup-prod: ## Warmup prod cache (catches DI/config errors)
 asset-compile: ## Compile AssetMapper (validates imports)
 	@echo "Compiling assets…"
 	$(SYMFONY) importmap:install
+	$(SYMFONY) tailwind:build --minify
 	$(SYMFONY) asset-map:compile; rc=$$?; $(EXEC) rm -rf public/assets; exit $$rc
 
 cs-check: ## PHP-CS-Fixer dry-run

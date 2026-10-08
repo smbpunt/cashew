@@ -102,6 +102,8 @@ jobs:
         run: php bin/console lint:yaml config translations --parse-tags
       - name: Lint translations
         run: php bin/console lint:translations
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build --minify --env=prod
       - name: Compile assets
         run: php bin/console asset-map:compile --env=prod
       - name: Warm up prod cache

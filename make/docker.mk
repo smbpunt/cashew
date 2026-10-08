@@ -1,4 +1,4 @@
-.PHONY: build up start down logs bash test migrate vendor assets
+.PHONY: build up start down logs bash test migrate vendor assets tailwind
 
 ## ---- Docker ----
 
@@ -39,5 +39,9 @@ vendor: composer ## Install vendors according to composer.lock
 assets: ## Install and compile assets
 	$(SYMFONY) assets:install && \
 	$(SYMFONY) importmap:install && \
+	$(SYMFONY) tailwind:build --minify && \
 	$(SYMFONY) asset-map:compile && \
 	if [ "$$($(SYMFONY) debug:container --parameter=kernel.environment 2>/dev/null | grep -c dev)" -eq 1 ]; then rm -R public/assets ; fi
+
+tailwind: ## Watch and rebuild Tailwind CSS
+	@$(PHP_CONT) php bin/console tailwind:build --watch
