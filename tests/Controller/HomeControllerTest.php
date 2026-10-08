@@ -16,4 +16,14 @@ final class HomeControllerTest extends WebTestCase
         self::assertSelectorCount(8, '[data-greeting-target="option"]');
         self::assertSelectorCount(1, '[data-greeting-target="option"][aria-pressed="true"]');
     }
+
+    public function testLayoutIsMobileReady(): void
+    {
+        $client = static::createClient();
+        $crawler = $client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('en', $crawler->filter('html')->attr('lang'));
+        self::assertStringContainsString('width=device-width', (string) $crawler->filter('meta[name="viewport"]')->attr('content'));
+    }
 }
