@@ -66,6 +66,25 @@ RUN <<-EOF
 	git config --system --add safe.directory /app
 EOF
 
+# Symfony Language Tools (symfony-lsp check), https://github.com/symfony/language-tools/releases
+ARG TARGETARCH
+ARG SYMFONY_LSP_VERSION=0.23.0
+ARG SYMFONY_LSP_SHA256_AMD64=f7169b653d178fda23f1f57e1f818c42d182bb674058feaa8897ef469f97ebb6
+ARG SYMFONY_LSP_SHA256_ARM64=e93aca8d348511c30fe0947e4b012fca3be74f5440f5bee687603cd47fe699a7
+RUN <<-EOF
+	case "$TARGETARCH" in
+		amd64) arch=x64 sha256="$SYMFONY_LSP_SHA256_AMD64" ;;
+		arm64) arch=arm64 sha256="$SYMFONY_LSP_SHA256_ARM64" ;;
+		*) echo "symfony-lsp: unsupported architecture $TARGETARCH" >&2; exit 1 ;;
+	esac
+	archive="symfony-lsp-v$SYMFONY_LSP_VERSION-linux-$arch"
+	curl -fsSL -o "/tmp/$archive.tar.gz" "https://github.com/symfony/language-tools/releases/download/v$SYMFONY_LSP_VERSION/$archive.tar.gz"
+	echo "$sha256  /tmp/$archive.tar.gz" | sha256sum -c -
+	tar -xzf "/tmp/$archive.tar.gz" -C /usr/local/bin --strip-components=1 "$archive/symfony-lsp"
+	rm "/tmp/$archive.tar.gz"
+	symfony-lsp --version
+EOF
+
 COPY --link frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
 
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]

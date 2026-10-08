@@ -13,6 +13,7 @@ COMPOSER = $(EXEC) composer
 SYMFONY  = $(PHP) bin/console
 PHPUNIT  = $(PHP) vendor/bin/phpunit
 REPORTS_DIR ?= var/reports
+SYMFONY_LSP = $(EXEC) symfony-lsp
 
 # --- Includes ---
 include make/quality.mk

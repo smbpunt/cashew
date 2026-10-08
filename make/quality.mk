@@ -1,4 +1,4 @@
-.PHONY: ci composer-validate lint-symfony doctrine-validate cache-warmup-prod asset-compile cs-check cs-fix rector-check rector-fix phpstan-check security-audit phpunit
+.PHONY: ci composer-validate lint-symfony doctrine-validate cache-warmup-prod asset-compile cs-check cs-fix rector-check rector-fix phpstan-check lsp-check security-audit phpunit
 
 ## ---- Validation ----
 
@@ -50,6 +50,10 @@ phpstan-check: ## PHPStan analysis
 	@echo "Running PHPStan…"
 	$(PHP) vendor/bin/phpstan analyse --memory-limit=512M
 
+lsp-check: ## Symfony Language Tools (routes, services, templates, config…)
+	@echo "Running Symfony Language Tools…"
+	$(SYMFONY_LSP) check
+
 security-audit: ## Composer security audit
 	@echo "Running Composer security audit…"
 	$(COMPOSER) audit --locked --abandoned=report
@@ -62,4 +66,4 @@ phpunit: ## PHPUnit - all tests
 
 ## ---- CI locale ----
 
-ci: composer-validate security-audit lint-symfony doctrine-validate cache-warmup-prod asset-compile cs-check rector-check phpstan-check phpunit ## CI locale complète
+ci: composer-validate security-audit lint-symfony doctrine-validate cache-warmup-prod asset-compile cs-check rector-check phpstan-check lsp-check phpunit ## CI locale complète
