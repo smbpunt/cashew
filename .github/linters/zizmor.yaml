@@ -3,4 +3,5 @@ rules:
   unpinned-uses:
     config:
       policies:
-        "*": ref-pin
+        # Tags can be moved; commit SHAs can't. Dependabot keeps the pins (and their comments) up to date.
+        "*": hash-pin

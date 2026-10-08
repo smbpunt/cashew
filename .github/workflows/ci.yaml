@@ -15,19 +15,207 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+env:
+  APP_ENV: test
+  PHP_VERSION: "8.5"
+  PHP_EXTENSIONS: intl, pdo_pgsql
+  DATABASE_URL: postgresql://app:password@127.0.0.1:5432/app?serverVersion=16&charset=utf8
+
+# Jobs run in parallel on purpose: one push reports test failures and static
+# analysis failures together, instead of hiding tests behind the linters.
 jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -d app -U app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          require-lock-file: true
+      - name: Set up database
+        run: |
+          php bin/console doctrine:database:create --if-not-exists
+          php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+          php bin/console messenger:setup-transports
+      - name: Validate Doctrine schema
+        run: |
+          php bin/console doctrine:schema:validate || {
+            echo "::group::SQL needed to sync the schema (add a migration)"
+            php bin/console doctrine:schema:update --dump-sql
+            echo "::endgroup::"
+            exit 1
+          }
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict --no-check-publish
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          require-lock-file: true
+      - name: Lint container
+        run: php bin/console lint:container --env=prod
+      - name: Lint Twig templates
+        run: php bin/console lint:twig templates --env=prod
+      - name: Lint YAML files
+        run: php bin/console lint:yaml config translations --parse-tags
+      - name: Lint translations
+        run: php bin/console lint:translations
+      - name: Compile assets
+        run: php bin/console asset-map:compile --env=prod
+      - name: Warm up prod cache
+        run: php bin/console cache:warmup --env=prod --no-debug
+      # Same version and checksum as the Dockerfile (frankenphp_dev stage): keep them in sync
+      - name: Install Symfony Language Tools
+        env:
+          SYMFONY_LSP_VERSION: 0.23.0
+          SYMFONY_LSP_SHA256: f7169b653d178fda23f1f57e1f818c42d182bb674058feaa8897ef469f97ebb6
+        run: |
+          archive="symfony-lsp-v${SYMFONY_LSP_VERSION}-linux-x64"
+          curl -fsSL -o "${RUNNER_TEMP}/${archive}.tar.gz" "https://github.com/symfony/language-tools/releases/download/v${SYMFONY_LSP_VERSION}/${archive}.tar.gz"
+          echo "${SYMFONY_LSP_SHA256}  ${RUNNER_TEMP}/${archive}.tar.gz" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${archive}.tar.gz" -C "${RUNNER_TEMP}" --strip-components=1 "${archive}/symfony-lsp"
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+      - name: Symfony diagnostics
+        run: symfony-lsp check --format=github
+
+  php-cs-fixer:
+    name: PHP CS Fixer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          require-lock-file: true
+      - name: Check coding standards
+        run: vendor/bin/php-cs-fixer check --diff --using-cache=no --show-progress=none
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          require-lock-file: true
+      # phpstan-symfony reads var/cache/dev/App_KernelDevDebugContainer.xml (see phpstan.dist.neon)
+      - name: Build dev container
+        run: php bin/console cache:warmup --env=dev
+      # The key holds the run id so each run saves a fresh cache; restore-keys picks the latest one
+      - name: Restore PHPStan result cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/phpstan
+          key: phpstan-result-cache-v1-${{ env.PHP_VERSION }}-${{ github.run_id }}
+          restore-keys: phpstan-result-cache-v1-${{ env.PHP_VERSION }}-
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+      - name: Save PHPStan result cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/phpstan
+          key: phpstan-result-cache-v1-${{ env.PHP_VERSION }}-${{ github.run_id }}
+
+  rector:
+    name: Rector
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          require-lock-file: true
+      - name: Check Rector refactorings
+        run: vendor/bin/rector process --dry-run --no-progress-bar
+
+  # Smoke test of the Docker/FrankenPHP stack (Dockerfile, compose files, Caddy, Mercure)
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build Docker images
-        uses: docker/bake-action@v7
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
           pull: true
           load: true
@@ -48,33 +236,23 @@ jobs:
       #   run: curl -v --insecure --fail-with-body https://localhost
       - name: Check Mercure reachability
         run: curl -vI --insecure --fail-with-body https://localhost/.well-known/mercure?match=test
-      # Uncomment if Doctrine ORM is installed
-      # - name: Create test database
-      #   run: docker compose exec -T php bin/console -e test doctrine:database:create
-      # Uncomment if Doctrine Migrations is installed
-      # - name: Run migrations
-      #   run: docker compose exec -T php bin/console -e test doctrine:migrations:migrate --no-interaction
-      # Uncomment if PHPUnit is installed
-      # - name: Run PHPUnit
-      #   run: docker compose exec -T php bin/phpunit
-      # Uncomment if Doctrine ORM is installed
-      # - name: Doctrine Schema Validator
-      #   run: docker compose exec -T php bin/console -e test doctrine:schema:validate
-  lint:
-    name: Lint
+
+  super-linter:
+    name: Super-Linter
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: read
       statuses: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Lint Code Base
-        uses: super-linter/super-linter/slim@v8
+        uses: super-linter/super-linter/slim@4ce20838b8ab83717e78138c5b3a1407148e0918 # v8.7.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_CHECKOV: false
@@ -82,3 +260,8 @@ jobs:
           VALIDATE_BIOME_FORMAT: false
           VALIDATE_BIOME_LINT: false
           VALIDATE_PYTHON_BLACK: false
+          # PHP is covered by the PHP CS Fixer, PHPStan and Rector jobs, with the project configs
+          VALIDATE_PHP_BUILTIN: false
+          VALIDATE_PHP_PHPCS: false
+          VALIDATE_PHP_PHPSTAN: false
+          VALIDATE_PHP_PSALM: false
