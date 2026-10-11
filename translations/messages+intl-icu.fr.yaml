@@ -1,4 +1,47 @@
 # ICU MessageFormat: https://symfony.com/doc/current/reference/formats/message_format.html
+home:
+    title: Cashew, vos entrées et sorties d’argent, mois par mois
+    headline: Voyez où va votre argent
+    pitch: Importez vos relevés bancaires et retrouvez chaque mois vos entrées et vos sorties d’un coup d’œil, comptées le jour du paiement, carte à débit différé ou non.
+    log_in: Se connecter
+    features:
+        statements:
+            title: Les exports de vos banques
+            description: Relevés CSV du Crédit Agricole et de Revolut, même s’ils se chevauchent.
+        months:
+            title: Mois par mois
+            description: Ce qui est entré, ce qui est sorti, et ce qui reste.
+        privacy:
+            title: Confidentiel
+            description: Les fichiers des relevés sont supprimés dès leur import.
+
+nav:
+    label: Principale
+    dashboard: Tableau de bord
+    import: Importer
+
+theme:
+    toggle: Basculer le thème sombre
+
+dashboard:
+    title: Tableau de bord
+    months: Mois
+    previous_month: Mois précédent
+    next_month: Mois suivant
+    income: Entrées
+    spending: Sorties
+    balance: Solde
+    transactions: Transactions
+    no_transactions: Aucune transaction en {month}.
+    importing:
+        title: '{count, plural, one {Import de votre relevé en cours…} other {Import de vos # relevés en cours…}}'
+        description: 'Cette page se mettra à jour toute seule une fois l’import terminé. Vous pouvez aussi la quitter : vos transactions vous attendront.'
+    empty:
+        title: Aucune donnée pour l’instant
+        description: Importez les relevés de vos comptes bancaires pour voir vos entrées et vos sorties d’argent.
+        waiting_for_month_end: 'Vos relevés ne contenaient que des transactions du mois en cours : exportez un nouveau relevé une fois le mois terminé, à partir du {date}.'
+        import: Importer des relevés
+
 locale:
     switcher: Langue
 
@@ -7,7 +50,6 @@ security:
     login:
         title: Connexion
         description: Saisissez votre identifiant et votre mot de passe.
-        logged_in_as: 'Session ouverte en tant que {login},'
         login: Identifiant
         password: Mot de passe
         submit: Se connecter

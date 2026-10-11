@@ -42,10 +42,11 @@ final class SecurityControllerTest extends WebTestCase
         $this->client->request('GET', '/login');
         $this->client->submitForm('Sign in', ['_username' => 'ALICE', '_password' => self::PASSWORD]);
 
-        self::assertResponseRedirects('/statements/import');
+        self::assertResponseRedirects('/dashboard');
 
+        // Nothing left to do on the login page
         $this->client->request('GET', '/login');
-        self::assertSelectorTextContains('[data-slot="alert"]', 'You are logged in as alice');
+        self::assertResponseRedirects('/dashboard');
     }
 
     public function testLoginFailsWithAWrongPassword(): void
@@ -88,24 +89,24 @@ final class SecurityControllerTest extends WebTestCase
     {
         $this->logIn();
 
-        $this->client->request('GET', '/login', server: ['HTTP_SEC_FETCH_SITE' => 'same-origin']);
+        $this->client->request('GET', '/dashboard', server: ['HTTP_SEC_FETCH_SITE' => 'same-origin']);
         $this->client->clickLink('log out');
         self::assertResponseRedirects('/');
 
         $this->client->request('GET', '/login');
-        self::assertSelectorNotExists('[data-slot="alert"]');
+        self::assertResponseIsSuccessful();
     }
 
     public function testLogoutIsRefusedWhenRequestedFromAnotherSite(): void
     {
         $this->logIn();
-        $logoutUrl = $this->client->request('GET', '/login')->selectLink('log out')->link()->getUri();
+        $logoutUrl = $this->client->request('GET', '/dashboard')->selectLink('log out')->link()->getUri();
 
         $this->client->request('GET', $logoutUrl, server: ['HTTP_SEC_FETCH_SITE' => 'cross-site']);
         self::assertResponseStatusCodeSame(403);
 
         $this->client->request('GET', '/login');
-        self::assertSelectorTextContains('[data-slot="alert"]', 'You are logged in as alice');
+        self::assertResponseRedirects('/dashboard');
     }
 
     public function testLogoutIsRefusedWithoutToken(): void
@@ -120,6 +121,6 @@ final class SecurityControllerTest extends WebTestCase
     {
         $this->client->request('GET', '/login');
         $this->client->submitForm('Sign in', ['_username' => 'alice', '_password' => self::PASSWORD]);
-        self::assertResponseRedirects('/statements/import');
+        self::assertResponseRedirects('/dashboard');
     }
 }

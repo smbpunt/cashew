@@ -11,14 +11,6 @@
         </twig:Card:Header>
 
         <twig:Card:Content>
-            {% if app.user %}
-                <twig:Alert class="mb-4">
-                    <twig:Alert:Description>
-                        {{ 'security.login.logged_in_as'|trans({login: app.user.userIdentifier}) }} <a href="{{ logout_path() }}" class="underline underline-offset-4">{{ 'security.log_out'|trans }}</a>
-                    </twig:Alert:Description>
-                </twig:Alert>
-            {% endif %}
-
             {% if error %}
                 <twig:Alert variant="destructive" class="mb-4" role="alert">
                     <twig:Alert:Description>{{ error.messageKey|trans(error.messageData, 'security') }}</twig:Alert:Description>

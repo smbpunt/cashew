@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{# The pages of a logged in user: a header to move between them, and the flash messages #}
+
+{% block locale_switcher %}{% endblock %}
+
+{% block body %}
+<header class="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
+    <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
+        <a href="{{ path('app_dashboard') }}" class="me-auto text-lg font-black tracking-tighter sm:me-0">Cashew</a>
+
+        <nav aria-label="{{ 'nav.label'|trans }}" class="order-last -mx-2.5 flex w-full items-center gap-1 sm:order-none sm:mx-0 sm:me-auto sm:w-auto">
+            {% for route, label in {app_dashboard: 'nav.dashboard', app_statement_import: 'nav.import'} %}
+                <twig:Button
+                    as="a"
+                    variant="ghost"
+                    size="sm"
+                    href="{{ path(route) }}"
+                    aria-current="{{ app.current_route == route ? 'page' : 'false' }}"
+                    class="text-muted-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >{{ label|trans }}</twig:Button>
+            {% endfor %}
+        </nav>
+
+        <div class="flex items-center gap-1">
+            <twig:LocaleSwitcher />
+            <twig:ThemeToggle />
+            <twig:Button as="a" variant="ghost" size="sm" href="{{ logout_path() }}">{{ 'security.log_out'|trans }}</twig:Button>
+        </div>
+    </div>
+</header>
+
+<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
+    {% for messages in app.flashes %}
+        {% for message in messages %}
+            <twig:Alert class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2">
+                <twig:Alert:Description>{{ message|trans }}</twig:Alert:Description>
+            </twig:Alert>
+        {% endfor %}
+    {% endfor %}
+
+    {% block content %}{% endblock %}
+</main>
+{% endblock %}

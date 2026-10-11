@@ -1,18 +1,16 @@
-{% extends 'base.html.twig' %}
+{% extends 'layout.html.twig' %}
 
 {% block title %}{{ 'statement.import.title'|trans }}{% endblock %}
 
-{% block body %}
-<main class="flex min-h-svh justify-center px-4 py-16">
-    <twig:Card class="w-full max-w-2xl self-start">
-        <twig:Card:Header>
-            <twig:Card:Title><h1>{{ 'statement.import.title'|trans }}</h1></twig:Card:Title>
-            <twig:Card:Description>{{ 'statement.import.description'|trans }}</twig:Card:Description>
-        </twig:Card:Header>
+{% block content %}
+<twig:Card class="mx-auto w-full max-w-2xl">
+    <twig:Card:Header>
+        <twig:Card:Title><h1>{{ 'statement.import.title'|trans }}</h1></twig:Card:Title>
+        <twig:Card:Description>{{ 'statement.import.description'|trans }}</twig:Card:Description>
+    </twig:Card:Header>
 
-        <twig:Card:Content>
-            <twig:StatementUpload />
-        </twig:Card:Content>
-    </twig:Card>
-</main>
+    <twig:Card:Content>
+        <twig:StatementUpload />
+    </twig:Card:Content>
+</twig:Card>
 {% endblock %}

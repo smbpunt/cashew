@@ -1,0 +1,93 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ 'dashboard.title'|trans }}{% endblock %}
+
+{% block content %}
+{% if importing %}
+    <twig:ImportsInProgress />
+{% endif %}
+
+{% if report %}
+    {% set month_name = report.month|format_date(pattern: 'LLLL y')|capitalize %}
+
+    <section aria-labelledby="month" class="flex flex-col gap-6">
+        <div class="flex items-center justify-between gap-4">
+            <h1 id="month" class="text-2xl font-bold tracking-tight">{{ month_name }}</h1>
+
+            <nav class="flex items-center gap-1" aria-label="{{ 'dashboard.months'|trans }}">
+                {% for link in [
+                    {month: report.previousMonth, label: 'dashboard.previous_month', icon: 'm15 18-6-6 6-6', rel: 'prev'},
+                    {month: report.nextMonth, label: 'dashboard.next_month', icon: 'm9 18 6-6-6-6', rel: 'next'},
+                ] %}
+                    {% set icon %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ link.icon }}"/></svg>{% endset %}
+                    {% if link.month %}
+                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_dashboard', {month: link.month|date('Y-m')}) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
+                    {% else %}
+                        <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label|trans }}">{{ icon }}</twig:Button>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        </div>
+
+        {% for totals in report.totals %}
+            <dl class="grid gap-4 sm:grid-cols-3" data-currency="{{ totals.currency }}">
+                {% for tile in [
+                    {label: 'dashboard.income', amount: totals.income, class: 'text-emerald-600 dark:text-emerald-400'},
+                    {label: 'dashboard.spending', amount: -totals.spending},
+                    {label: 'dashboard.balance', amount: totals.balance, signed: true},
+                ] %}
+                    <twig:Card class="gap-1 px-6 py-5">
+                        <dt class="text-sm text-muted-foreground">{{ tile.label|trans }}</dt>
+                        <dd class="text-2xl font-semibold tracking-tight">
+                            <twig:Money :amount="tile.amount" :currency="totals.currency" :signed="tile.signed ?? false" :class="tile.class ?? ''" />
+                        </dd>
+                    </twig:Card>
+                {% endfor %}
+            </dl>
+        {% endfor %}
+
+        <twig:Card class="gap-0 py-0">
+            <h2 class="sr-only">{{ 'dashboard.transactions'|trans }}</h2>
+            {% if report.transactions is empty %}
+                <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'dashboard.no_transactions'|trans({month: month_name}) }}</p>
+            {% else %}
+                <ul class="divide-y">
+                    {% for transaction in report.transactions %}
+                        {% set label = transaction.label|split("\n") %}
+                        <li class="flex items-center gap-4 px-4 py-3 sm:px-6" data-transaction>
+                            <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
+                                {{- transaction.date|format_date(pattern: 'd MMM') -}}
+                            </time>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-medium" title="{{ label|join(' · ') }}">{{ label|join(' · ') }}</p>
+                                <p class="truncate text-xs text-muted-foreground">
+                                    {{- transaction.account.label }} · {{ transaction.account.bank.label -}}
+                                    {%- if transaction.bankCategory %} · {{ transaction.bankCategory }}{% endif -%}
+                                </p>
+                            </div>
+                            <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </twig:Card>
+    </section>
+{% elseif not importing %}
+    <twig:Card class="mx-auto w-full max-w-lg items-center px-6 py-12 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95">
+        <div class="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-6"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+        </div>
+        <div class="flex flex-col gap-2">
+            <h1 class="text-xl font-semibold tracking-tight">{{ 'dashboard.empty.title'|trans }}</h1>
+            <p class="text-sm text-balance text-muted-foreground">
+                {% if waiting_for_month_end %}
+                    {{ 'dashboard.empty.waiting_for_month_end'|trans({date: next_import_date|format_date('long')}) }}
+                {% else %}
+                    {{ 'dashboard.empty.description'|trans }}
+                {% endif %}
+            </p>
+        </div>
+        <twig:Button as="a" size="lg" href="{{ path('app_statement_import') }}">{{ 'dashboard.empty.import'|trans }}</twig:Button>
+    </twig:Card>
+{% endif %}
+{% endblock %}

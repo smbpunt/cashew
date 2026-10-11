@@ -1,19 +1,8 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello world{% endblock %}
+{% block title %}{{ 'home.title'|trans }}{% endblock %}
 
 {% block body %}
-{% set greetings = [
-    {lang: 'en', code: 'EN', name: 'English', text: 'Hello, world!'},
-    {lang: 'fr', code: 'FR', name: 'Français', text: 'Bonjour, monde !'},
-    {lang: 'es', code: 'ES', name: 'Español', text: '¡Hola, mundo!'},
-    {lang: 'it', code: 'IT', name: 'Italiano', text: 'Ciao, mondo!'},
-    {lang: 'de', code: 'DE', name: 'Deutsch', text: 'Hallo, Welt!'},
-    {lang: 'pt', code: 'PT', name: 'Português', text: 'Olá, mundo!'},
-    {lang: 'ja', code: 'JA', name: '日本語', text: 'こんにちは世界'},
-    {lang: 'ko', code: 'KO', name: '한국어', text: '안녕, 세상!'},
-] %}
-
 <main class="relative isolate flex min-h-svh items-center justify-center overflow-hidden px-4 py-16">
     <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
         <div class="absolute inset-0 bg-[radial-gradient(var(--color-foreground)_1px,transparent_1px)] bg-size-[22px_22px] opacity-10 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]"></div>
@@ -22,53 +11,33 @@
         <div class="absolute top-1/3 left-1/2 size-[22rem] -translate-x-1/2 rounded-full bg-fuchsia-500/20 blur-3xl dark:bg-fuchsia-500/15 motion-safe:animate-pulse [animation-delay:3s]"></div>
     </div>
 
-    <twig:Card
-        class="w-full max-w-4xl items-center gap-8 bg-card/70 px-6 py-12 text-center shadow-2xl shadow-violet-500/10 backdrop-blur-xl sm:px-12 sm:py-16 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-700"
-        data-controller="greeting"
-        :data-greeting-greetings-value="greetings|json_encode"
-        data-action="mouseenter->greeting#pause mouseleave->greeting#resume focusin->greeting#pause focusout->greeting#resume"
-    >
+    <twig:Card class="w-full max-w-3xl items-center gap-8 bg-card/70 px-6 py-12 text-center shadow-2xl shadow-violet-500/10 backdrop-blur-xl sm:px-12 sm:py-16 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-700">
         <twig:Badge variant="outline" class="gap-2 bg-background/60 px-3 py-3">
             <span class="relative flex size-2">
                 <span class="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping"></span>
                 <span class="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
             </span>
-            Cashew is live
+            Cashew
         </twig:Badge>
 
-        <h1 class="flex min-h-[2.3em] items-center justify-center text-5xl leading-none font-black tracking-tighter text-balance sm:min-h-[1.2em] sm:text-7xl lg:text-8xl">
-            <span
-                data-greeting-target="phrase"
-                lang="en"
-                class="bg-linear-to-br from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text box-decoration-clone pb-[0.1em] text-transparent dark:from-violet-400 dark:via-fuchsia-400 dark:to-amber-300 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-6 motion-safe:duration-700"
-            >{{ greetings|first.text }}</span>
+        <h1 class="text-4xl leading-tight font-black tracking-tighter text-balance sm:text-6xl">
+            <span class="bg-linear-to-br from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text box-decoration-clone pb-[0.1em] text-transparent dark:from-violet-400 dark:via-fuchsia-400 dark:to-amber-300">{{ 'home.headline'|trans }}</span>
         </h1>
 
-        <p class="text-base text-muted-foreground sm:text-lg">
-            Said in <span data-greeting-target="language" class="font-medium text-foreground">{{ greetings|first.name }}</span>
-        </p>
+        <p class="max-w-xl text-base text-balance text-muted-foreground sm:text-lg">{{ 'home.pitch'|trans }}</p>
 
-        <div role="group" aria-label="Choose a language" class="flex flex-wrap justify-center gap-2">
-            {% for greeting in greetings %}
-                <twig:Button
-                    variant="outline"
-                    size="sm"
-                    class="min-w-11 rounded-full font-mono aria-pressed:border-transparent! aria-pressed:bg-primary! aria-pressed:text-primary-foreground! aria-pressed:hover:bg-primary/90!"
-                    :aria-pressed="loop.first ? 'true' : 'false'"
-                    :title="greeting.name"
-                    data-greeting-target="option"
-                    data-action="greeting#select"
-                    :data-greeting-index-param="loop.index0"
-                >{{ greeting.code }}</twig:Button>
+        <ul class="grid w-full gap-3 text-start text-sm sm:grid-cols-3">
+            {% for feature in ['statements', 'months', 'privacy'] %}
+                <li class="rounded-lg border bg-background/60 px-4 py-3">
+                    <p class="font-medium">{{ ('home.features.' ~ feature ~ '.title')|trans }}</p>
+                    <p class="text-muted-foreground">{{ ('home.features.' ~ feature ~ '.description')|trans }}</p>
+                </li>
             {% endfor %}
-        </div>
+        </ul>
 
         <div class="flex items-center gap-3">
-            <twig:Button size="lg" class="h-11 rounded-full px-6 text-base" data-action="greeting#next">Say it again</twig:Button>
-            <twig:Button size="icon-lg" variant="outline" class="size-11 rounded-full" data-controller="theme" data-action="theme#toggle" aria-label="Toggle dark mode">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="dark:hidden"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="hidden dark:block"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-            </twig:Button>
+            <twig:Button as="a" href="{{ path('app_login') }}" size="lg" class="h-11 rounded-full px-6 text-base">{{ 'home.log_in'|trans }}</twig:Button>
+            <twig:ThemeToggle variant="outline" size="icon-lg" class="size-11 rounded-full" />
         </div>
     </twig:Card>
 </main>

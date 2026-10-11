@@ -6,13 +6,18 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/', name: 'app_home')]
+/**
+ * Introduces the application to visitors; logged in users go straight to their dashboard.
+ */
+#[Route('/', name: 'app_home', methods: ['GET'])]
 final class HomeController extends AbstractController
 {
     public function __invoke(): Response
     {
-        return $this->render('home/index.html.twig', [
-            'controller_name' => 'HomeController',
-        ]);
+        if (null !== $this->getUser()) {
+            return $this->redirectToRoute('app_dashboard');
+        }
+
+        return $this->render('home/index.html.twig');
     }
 }

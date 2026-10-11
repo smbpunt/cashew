@@ -56,4 +56,34 @@ class StatementImportRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * The owner's imports still waiting for the worker, or being run, oldest first.
+     *
+     * @return list<StatementImport>
+     */
+    public function findInProgress(User $owner): array
+    {
+        return $this->createQueryBuilder('i')
+            ->where('i.owner = :owner')
+            ->andWhere('i.status IN (:statuses)')
+            ->setParameter('owner', $owner)
+            ->setParameter('statuses', [ImportStatus::Pending, ImportStatus::Processing])
+            ->orderBy('i.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function hasDone(User $owner): bool
+    {
+        return null !== $this->createQueryBuilder('i')
+            ->select('i.id')
+            ->where('i.owner = :owner')
+            ->andWhere('i.status = :done')
+            ->setParameter('owner', $owner)
+            ->setParameter('done', ImportStatus::Done)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

@@ -1,4 +1,47 @@
 # ICU MessageFormat: https://symfony.com/doc/current/reference/formats/message_format.html
+home:
+    title: Cashew, your income and spending, month by month
+    headline: See where your money goes
+    pitch: Import your bank statements, and get every month's income and spending at a glance, counted on the day you paid, deferred debit card or not.
+    log_in: Log in
+    features:
+        statements:
+            title: Your bank exports
+            description: Crédit Agricole and Revolut CSV statements, overlaps welcome.
+        months:
+            title: Month by month
+            description: What came in, what went out, and what's left.
+        privacy:
+            title: Private
+            description: Statement files are deleted as soon as they're imported.
+
+nav:
+    label: Main
+    dashboard: Dashboard
+    import: Import
+
+theme:
+    toggle: Toggle dark mode
+
+dashboard:
+    title: Dashboard
+    months: Months
+    previous_month: Previous month
+    next_month: Next month
+    income: Income
+    spending: Spending
+    balance: Balance
+    transactions: Transactions
+    no_transactions: No transactions in {month}.
+    importing:
+        title: '{count, plural, one {Importing your statement…} other {Importing your # statements…}}'
+        description: 'This page updates itself once it''s done. You can also leave: your transactions will be waiting for you.'
+    empty:
+        title: No data yet
+        description: Import the statements of your bank accounts to see your income and spending.
+        waiting_for_month_end: 'Your statements only held transactions of the month in progress: export a new statement once it''s over, from {date}.'
+        import: Import statements
+
 locale:
     switcher: Language
 
@@ -7,7 +50,6 @@ security:
     login:
         title: Sign in
         description: Enter your login and password.
-        logged_in_as: 'You are logged in as {login},'
         login: Login
         password: Password
         submit: Sign in
