@@ -15,3 +15,6 @@ composer.lock text eol=lf merge=ours
 
 *.ico binary
 *.png binary
+
+# Bank statement fixtures: keep their exact bytes (encoding, trailing spaces), as the banks export them
+tests/Fixtures/Statement/** -text -diff

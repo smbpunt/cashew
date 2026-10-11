@@ -20,3 +20,9 @@ indent_size = 2
 [**.md]
 indent_size = unset
 indent_style = unset
+
+# Bank statement fixtures: keep their exact bytes (encoding, trailing spaces), as the banks export them
+[tests/Fixtures/Statement/**]
+charset = unset
+insert_final_newline = unset
+trim_trailing_whitespace = false
