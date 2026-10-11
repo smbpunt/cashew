@@ -4,6 +4,15 @@ statement:
         max_files: 'Envoyez au plus {{ limit }} fichiers à la fois.'
         not_csv: Seuls les exports CSV sont pris en charge.
 
+category:
+    name:
+        taken: Une catégorie de ce nom existe déjà à cet endroit.
+    parent:
+        invalid: Choisissez une de vos catégories principales.
+        too_deep: 'Les catégories ont deux niveaux au plus : choisissez une catégorie principale, sans sous-catégories.'
+    icon:
+        invalid: Choisissez une des icônes proposées.
+
 user:
     login:
         taken: Cet identifiant est déjà pris.

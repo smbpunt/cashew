@@ -10,6 +10,7 @@ use App\Repository\StatementImportRepository;
 use App\Repository\TransactionRepository;
 use App\Statement\Exception\DuplicateStatementException;
 use App\Statement\Import\CutoffPolicy;
+use App\Statement\ImportDestination;
 use App\Statement\StatementImportNotifier;
 use App\Statement\StatementUploader;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -32,7 +33,7 @@ use Symfony\UX\LiveComponent\DefaultActionTrait;
 /**
  * Uploads statements, then follows their imports until they're over: the Messenger worker announces each status
  * change through Mercure, and the component also polls in case that update is missed. Once they're all done, it says
- * so, and leaves for the dashboard.
+ * so, and leaves: for the review of the recurring series they brought up, if any, for the dashboard otherwise.
  *
  * Emits "statement:imported" with the import's id when an import is done, for the rest of the page to refresh.
  */
@@ -60,7 +61,8 @@ final class StatementUpload
     public array $announcedIds = [];
 
     /**
-     * Whether the imports followed are all done: the dashboard shows next.
+     * Whether the imports followed are all done: the review of the recurring series they brought up shows next, or
+     * the dashboard.
      */
     #[LiveProp]
     public bool $completed = false;
@@ -80,6 +82,8 @@ final class StatementUpload
 
     private ?FormView $form = null;
 
+    private ?string $nextUrl = null;
+
     /**
      * @var list<StatementImport>|null
      */
@@ -90,6 +94,7 @@ final class StatementUpload
         private readonly StatementUploader $uploader,
         private readonly StatementImportRepository $importRepository,
         private readonly TransactionRepository $transactions,
+        private readonly ImportDestination $destination,
         private readonly CutoffPolicy $cutoff,
         private readonly Security $security,
         private readonly TranslatorInterface $translator,
@@ -163,6 +168,14 @@ final class StatementUpload
                 $this->emit('statement:imported', ['id' => $id]);
             }
         }
+    }
+
+    /**
+     * Where to go once the imports are done.
+     */
+    public function getNextUrl(): string
+    {
+        return $this->nextUrl ??= $this->destination->url($this->user(), $this->importIds);
     }
 
     public function getForm(): FormView

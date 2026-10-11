@@ -3,9 +3,13 @@
 namespace App\Repository;
 
 use App\Entity\BankAccount;
+use App\Entity\Category;
+use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
+use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
+use App\Report\Month;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -42,9 +46,9 @@ class TransactionRepository extends ServiceEntityRepository
      */
     public function findOfMonth(User $owner, \DateTimeImmutable $month): array
     {
-        $start = $month->modify('first day of this month')->setTime(0, 0);
+        $start = Month::firstDayOf($month);
 
-        return $this->ownedWithoutSettlements($owner)
+        return $this->withCategories($this->ownedWithoutSettlements($owner))
             ->addSelect('a')
             ->andWhere('t.date >= :start')
             ->andWhere('t.date < :end')
@@ -76,6 +80,86 @@ class TransactionRepository extends ServiceEntityRepository
         return [new \DateTimeImmutable($range['first']), new \DateTimeImmutable($range['last'])];
     }
 
+    /**
+     * The days of the first and last transactions each import brought, deferred card settlements aside; none for an
+     * import that brought none.
+     *
+     * @param list<StatementImport> $imports
+     *
+     * @return array<int, array{\DateTimeImmutable, \DateTimeImmutable}> by import id
+     */
+    public function findDateRangesByImport(array $imports): array
+    {
+        if ([] === $imports) {
+            return [];
+        }
+
+        /** @var list<array{import: int|string, first: string, last: string}> $rows */
+        $rows = $this->createQueryBuilder('t')
+            ->select('IDENTITY(t.statementImport) AS import', 'MIN(t.date) AS first', 'MAX(t.date) AS last')
+            ->where('t.statementImport IN (:imports)')
+            ->andWhere('t.kind != :settlement')
+            ->setParameter('imports', $imports)
+            ->setParameter('settlement', TransactionKind::DeferredCardSettlement)
+            ->groupBy('t.statementImport')
+            ->getQuery()
+            ->getArrayResult();
+
+        $ranges = [];
+        foreach ($rows as $row) {
+            $ranges[(int) $row['import']] = [new \DateTimeImmutable($row['first']), new \DateTimeImmutable($row['last'])];
+        }
+
+        return $ranges;
+    }
+
+    /**
+     * The owner's transactions that may come back, oldest first, with their series: all but the deferred card
+     * settlements, which only add up purchases.
+     *
+     * @return list<Transaction>
+     */
+    public function findForRecurrence(User $owner): array
+    {
+        return $this->ownedWithoutSettlements($owner)
+            ->addSelect('a', 's')
+            ->leftJoin('t.recurringSeries', 's')
+            ->orderBy('t.date', 'ASC')
+            ->addOrderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Every transaction of the confirmed series that the imports added to, oldest first.
+     *
+     * @param list<StatementImport> $imports
+     *
+     * @return list<Transaction>
+     */
+    public function findOfConfirmedSeriesImportedBy(array $imports): array
+    {
+        if ([] === $imports) {
+            return [];
+        }
+
+        $series = $this->createQueryBuilder('imported')
+            ->select('IDENTITY(imported.recurringSeries)')
+            ->where('imported.statementImport IN (:imports)');
+
+        return $this->createQueryBuilder('t')
+            ->addSelect('s')
+            ->join('t.recurringSeries', 's')
+            ->where('s.status = :confirmed')
+            ->andWhere($this->getEntityManager()->getExpressionBuilder()->in('s.id', $series->getDQL()))
+            ->setParameter('confirmed', SeriesStatus::Confirmed)
+            ->setParameter('imports', $imports)
+            ->orderBy('t.date', 'ASC')
+            ->addOrderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function hasAny(User $owner): bool
     {
         return null !== $this->createQueryBuilder('t')
@@ -86,6 +170,44 @@ class TransactionRepository extends ServiceEntityRepository
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * The transactions of the categories, or of their confirmed series, within the period, most recent first.
+     *
+     * @param list<Category> $categories
+     *
+     * @return list<Transaction>
+     */
+    public function findInCategories(User $owner, array $categories, \DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        return $this->withCategories($this->ownedWithoutSettlements($owner))
+            ->addSelect('a')
+            ->andWhere('t.category IN (:categories) OR (t.category IS NULL AND s.status = :confirmed AND s.category IN (:categories))')
+            ->andWhere('t.date >= :start')
+            ->andWhere('t.date < :end')
+            ->setParameter('categories', $categories)
+            ->setParameter('confirmed', SeriesStatus::Confirmed)
+            ->setParameter('start', $start, Types::DATE_IMMUTABLE)
+            ->setParameter('end', $end, Types::DATE_IMMUTABLE)
+            ->orderBy('t.date', 'DESC')
+            ->addOrderBy('t.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Loads with them what tells their category: their own, or that of their series.
+     */
+    private function withCategories(QueryBuilder $queryBuilder): QueryBuilder
+    {
+        return $queryBuilder
+            ->addSelect('c', 'cp', 's', 'sc', 'scp')
+            ->leftJoin('t.category', 'c')
+            ->leftJoin('c.parent', 'cp')
+            ->leftJoin('t.recurringSeries', 's')
+            ->leftJoin('s.category', 'sc')
+            ->leftJoin('sc.parent', 'scp');
     }
 
     private function ownedWithoutSettlements(User $owner): QueryBuilder

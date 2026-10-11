@@ -4,6 +4,15 @@ statement:
         max_files: 'Upload at most {{ limit }} files at once.'
         not_csv: Only CSV exports are supported.
 
+category:
+    name:
+        taken: A category of that name is already there.
+    parent:
+        invalid: Pick one of your top categories.
+        too_deep: 'Categories have two levels at most: pick a top category, without subcategories of its own.'
+    icon:
+        invalid: Pick one of the icons offered.
+
 user:
     login:
         taken: This login is already taken.

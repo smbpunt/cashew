@@ -10,23 +10,24 @@
     {% endif %}
 
     {% if completed %}
-        {% set dashboard_url = path('app_dashboard') %}
+        {% set next_url = this.nextUrl %}
+        {% set review = next_url != path('app_dashboard') %}
         <div role="status" class="flex flex-col items-center gap-3 py-4 text-center"
             data-controller="import-complete"
-            data-import-complete-url-value="{{ dashboard_url }}"
+            data-import-complete-url-value="{{ next_url }}"
             data-import-complete-delay-value="1800"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="import-check size-16 text-emerald-500">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="import-check size-16 text-success">
                 <circle cx="26" cy="26" r="24"/>
                 <path d="M15 27l7 7 15-15"/>
             </svg>
             <p class="text-lg font-semibold tracking-tight motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:delay-500 motion-safe:fill-mode-both">{{ 'statement.import.completed.title'|trans }}</p>
             <p class="text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:delay-700 motion-safe:fill-mode-both">
-                {{ 'statement.import.completed.redirecting'|trans }}
-                <a href="{{ dashboard_url }}" class="font-medium text-foreground underline underline-offset-4">{{ 'statement.import.completed.go'|trans }}</a>
+                {{ (review ? 'statement.import.completed.redirecting_review' : 'statement.import.completed.redirecting')|trans }}
+                <a href="{{ next_url }}" class="font-medium text-foreground underline underline-offset-4">{{ (review ? 'statement.import.completed.review' : 'statement.import.completed.go')|trans }}</a>
             </p>
             <div aria-hidden="true" class="h-1 w-40 overflow-hidden rounded-full bg-muted">
-                <div class="import-redirect-bar h-full rounded-full bg-emerald-500 [--import-redirect-delay:1.8s]"></div>
+                <div class="import-redirect-bar h-full rounded-full bg-success [--import-redirect-delay:1.8s]"></div>
             </div>
         </div>
     {% else %}
@@ -79,24 +80,7 @@
     {% if this.imports is not empty %}
         <ul class="flex flex-col gap-2" aria-live="polite" aria-label="{{ 'statement.upload.imports'|trans }}">
             {% for import in this.imports %}
-                <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border px-4 py-3 text-sm" data-import-status="{{ import.status.value }}">
-                    <span class="min-w-0 truncate font-medium">{{ import.originalFilename }}</span>
-                    {% if import.status.value == 'pending' %}
-                        <twig:Badge variant="secondary">{{ 'statement.import.status.pending'|trans }}</twig:Badge>
-                    {% elseif import.status.value == 'processing' %}
-                        <twig:Badge variant="secondary">{{ 'statement.import.status.processing'|trans }}</twig:Badge>
-                    {% elseif import.status.value == 'done' %}
-                        <span class="flex flex-wrap items-center gap-2 text-muted-foreground">
-                            <twig:Badge>{{ import.bank.label }}</twig:Badge>
-                            {{ 'statement.import.result'|trans({imported: import.importedCount, skipped: import.skippedCount, after_cutoff: import.afterCutoffCount}) }}
-                        </span>
-                    {% else %}
-                        <span class="flex flex-wrap items-center gap-2">
-                            <twig:Badge variant="destructive">{{ 'statement.import.status.failed'|trans }}</twig:Badge>
-                            <span class="text-destructive">{{ import.error|trans }}</span>
-                        </span>
-                    {% endif %}
-                </li>
+                <twig:ImportResult :import="import" />
             {% endfor %}
         </ul>
     {% endif %}

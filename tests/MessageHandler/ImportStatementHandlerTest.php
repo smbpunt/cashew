@@ -3,6 +3,7 @@
 namespace App\Tests\MessageHandler;
 
 use App\Entity\BankAccount;
+use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
@@ -60,6 +61,26 @@ final class ImportStatementHandlerTest extends KernelTestCase
             TransactionKind::Regular->value => 4,
             TransactionKind::DeferredCardPurchase->value => 2,
         ], $this->countKinds());
+    }
+
+    public function testSuggestsTheRecurringTransactionsOfTheStatement(): void
+    {
+        self::mockTime('2026-10-11');
+
+        $import = $this->uploadAndImport('credit_agricole_recurring.csv');
+
+        self::assertSame(26, $import->getImportedCount());
+        $series = $this->entityManager->getRepository(RecurringSeries::class)->findBy([], ['name' => 'ASC']);
+        self::assertSame(
+            [['Echeance Pret', -85000, 4], ['Edf Clients Particuliers', -8500, 4], ['Free Mobile', -1999, 5], ['Salaire Acme Sas', 250000, 4]],
+            array_map(fn (RecurringSeries $series): array => [
+                $series->getName(),
+                $series->getTypicalAmount(),
+                $this->entityManager->getRepository(Transaction::class)->count(['recurringSeries' => $series]),
+            ], $series),
+        );
+        // Not the shopping
+        self::assertSame(9, $this->entityManager->getRepository(Transaction::class)->count(['recurringSeries' => null]));
     }
 
     public function testLeavesTheMonthInProgressForLater(): void

@@ -11,6 +11,7 @@
             try {
                 const theme = localStorage.getItem('theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                 document.documentElement.classList.toggle('dark', theme === 'dark');
+                document.documentElement.classList.toggle('soft', theme === 'soft');
             } catch {}
         </script>
         {% block stylesheets %}

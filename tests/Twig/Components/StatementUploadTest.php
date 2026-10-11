@@ -88,6 +88,18 @@ final class StatementUploadTest extends WebTestCase
         self::assertStringContainsString('Once a month is over', (string) $this->component()->render());
     }
 
+    public function testLeavesForTheReviewOfTheRecurringTransactionsFound(): void
+    {
+        $component = $this->upload($this->component(), $this->file('credit_agricole_recurring.csv'));
+        $this->handleQueuedMessages(1);
+
+        $rendered = $component->call('refresh')->render();
+
+        $id = self::getContainer()->get(EntityManagerInterface::class)->getRepository(StatementImport::class)->findOneBy([])?->getId();
+        self::assertCount(1, $rendered->crawler()->filter(\sprintf('[data-controller="import-complete"][data-import-complete-url-value="/review?imports%%5B0%%5D=%d"]', $id)));
+        self::assertStringContainsString('Taking you to the recurring transactions found…', (string) $rendered);
+    }
+
     public function testAFailedImportShowsWhy(): void
     {
         $component = $this->upload($this->component(), $this->file(contents: "Date,Amount\n2026-09-01,12.00\n"));

@@ -1,0 +1,19 @@
+{% set series = this.series %}
+<div {{ attributes.defaults({class: 'block'}) }}>
+    <twig:Card class="gap-0 py-0">
+        <div class="flex flex-col gap-1 border-b px-4 py-3 sm:px-6">
+            <h2 class="font-semibold">{{ 'review.suggestions.title'|trans({count: series|length}) }}</h2>
+            <p class="text-sm text-muted-foreground">{{ 'review.suggestions.description'|trans }}</p>
+        </div>
+
+        {% if series is empty %}
+            <p class="px-6 py-10 text-center text-sm text-muted-foreground" data-empty>{{ 'review.suggestions.empty'|trans }}</p>
+        {% else %}
+            <ul class="divide-y">
+                {% for one in series %}
+                    <twig:SeriesSuggestion :series="one" key="series-{{ one.id }}" />
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </twig:Card>
+</div>

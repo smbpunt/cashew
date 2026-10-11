@@ -31,6 +31,12 @@ final readonly class MonthlyReport
          * Null when the month is the last with transactions.
          */
         public ?\DateTimeImmutable $nextMonth,
+        /**
+         * One per currency of the transactions, like the totals.
+         *
+         * @var list<CategoryBreakdown>
+         */
+        public array $categories,
     ) {
     }
 }

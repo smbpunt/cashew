@@ -21,7 +21,7 @@
         </twig:Badge>
 
         <h1 class="text-4xl leading-tight font-black tracking-tighter text-balance sm:text-6xl">
-            <span class="bg-linear-to-br from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text box-decoration-clone pb-[0.1em] text-transparent dark:from-violet-400 dark:via-fuchsia-400 dark:to-amber-300">{{ 'home.headline'|trans }}</span>
+            <span class="bg-linear-to-br from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text box-decoration-clone pb-[0.1em] text-transparent dark:from-violet-400 dark:via-fuchsia-400 dark:to-amber-300 soft:from-violet-700 soft:via-fuchsia-700 soft:to-amber-700">{{ 'home.headline'|trans }}</span>
         </h1>
 
         <p class="max-w-xl text-base text-balance text-muted-foreground sm:text-lg">{{ 'home.pitch'|trans }}</p>
@@ -37,7 +37,7 @@
 
         <div class="flex items-center gap-3">
             <twig:Button as="a" href="{{ path('app_login') }}" size="lg" class="h-11 rounded-full px-6 text-base">{{ 'home.log_in'|trans }}</twig:Button>
-            <twig:ThemeToggle variant="outline" size="icon-lg" class="size-11 rounded-full" />
+            <twig:ThemeSwitcher size="icon-lg" class="rounded-full border bg-background/60 p-1 [&>button]:rounded-full" />
         </div>
     </twig:Card>
 </main>

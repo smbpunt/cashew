@@ -30,8 +30,8 @@ final readonly class MonthlyReportBuilder
             return null;
         }
 
-        [$first, $last] = array_map(self::firstDayOf(...), $range);
-        $month = self::firstDayOf($month ?? $last);
+        [$first, $last] = array_map(Month::firstDayOf(...), $range);
+        $month = Month::firstDayOf($month ?? $last);
         if ($month < $first || $month > $last) {
             throw new \OutOfRangeException(\sprintf('No transactions before %s or after %s.', $first->format('Y-m'), $last->format('Y-m')));
         }
@@ -51,11 +51,7 @@ final readonly class MonthlyReportBuilder
             array_values($totals),
             $month > $first ? $month->modify('-1 month') : null,
             $month < $last ? $month->modify('+1 month') : null,
+            array_map(static fn (MonthlyTotals $totals): CategoryBreakdown => CategoryBreakdown::of($totals->currency, $transactions), array_values($totals)),
         );
-    }
-
-    private static function firstDayOf(\DateTimeImmutable $day): \DateTimeImmutable
-    {
-        return $day->modify('first day of this month')->setTime(0, 0);
     }
 }

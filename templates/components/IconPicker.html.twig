@@ -1,0 +1,42 @@
+{% set results = computed.results %}
+<div {{ attributes.defaults({class: 'block'}) }}>
+    {% if name %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endif %}
+    <details class="relative">
+        <twig:Button as="summary" variant="outline" size="icon" class="list-none [&::-webkit-details-marker]:hidden" title="{{ 'category.icon.choose'|trans }}" aria-label="{{ 'category.icon.choose'|trans }}">
+            {% if value %}
+                <twig:ux:icon name="{{ value }}" class="size-4" data-icon="{{ value }}" />
+            {% else %}
+                <span class="size-4 rounded-full border border-dashed border-muted-foreground" data-icon></span>
+            {% endif %}
+        </twig:Button>
+
+        <div class="absolute z-20 mt-1 flex w-72 flex-col gap-2 rounded-lg border bg-popover p-2 text-popover-foreground shadow-md">
+            <twig:Input type="search" data-model="query" data-action="keydown.enter->live#$render:prevent" placeholder="{{ 'category.icon.search'|trans }}" aria-label="{{ 'category.icon.search'|trans }}" autocomplete="off" />
+
+            {% if results is null %}
+                <p class="px-1 py-4 text-center text-sm text-muted-foreground" data-unavailable>{{ 'category.icon.unavailable'|trans }}</p>
+            {% elseif results is empty %}
+                <p class="px-1 py-4 text-center text-sm text-muted-foreground" data-no-results>{{ 'category.icon.no_results'|trans({query: query}) }}</p>
+            {% else %}
+                <div class="grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto">
+                    {% for icon in results %}
+                        {% set label = icon|split(':')|last %}
+                        <button type="button"
+                            class="flex size-8 items-center justify-center rounded-md outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                            aria-pressed="{{ icon == value ? 'true' : 'false' }}" aria-label="{{ label }}" title="{{ label }}"
+                            data-action="live#action" data-live-action-param="pick" data-live-icon-param="{{ icon }}" data-icon-option="{{ icon }}"
+                        >
+                            <span class="size-4 bg-current" style="mask: url('{{ this.preview(icon) }}') center / contain no-repeat" aria-hidden="true"></span>
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if value %}
+                <twig:Button variant="ghost" size="xs" class="self-start" data-action="live#action" data-live-action-param="pick" data-icon-none>{{ 'category.icon.none'|trans }}</twig:Button>
+            {% endif %}
+        </div>
+    </details>
+</div>

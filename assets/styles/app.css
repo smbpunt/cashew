@@ -4,6 +4,7 @@
 @import '../vendor/shadcn/dist/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant soft (&:is(.soft *));
 
 @theme inline {
     --color-sidebar-ring: var(--sidebar-ring);
@@ -22,6 +23,8 @@
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
+    --color-warning: var(--warning);
+    --color-success: var(--success);
     --color-destructive: var(--destructive);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
@@ -62,6 +65,8 @@
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
+    --success: oklch(0.596 0.145 163.225);
+    --warning: oklch(0.555 0.163 48.998);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
@@ -97,6 +102,8 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.704 0.191 22.216);
+    --success: oklch(0.765 0.177 163.223);
+    --warning: oklch(0.828 0.189 84.429);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
@@ -113,6 +120,55 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * A softer light theme: an off-white tinted with the home page violet, near-black text, and the violet,
+ * fuchsia and amber of the home page for accents. Every text pair reaches WCAG AA (4.5:1), and borders of
+ * controls, focus and chart colors reach 3:1. Surfaces step from sunken (muted) to page (background) to
+ * raised (card) to floating (popover). Chart colors stay apart under protanopia and deuteranopia.
+ */
+.soft {
+    color-scheme: light;
+    --background: oklch(0.955 0.014 300);
+    --foreground: oklch(0.24 0.025 295);
+    --card: oklch(0.985 0.006 300);
+    --card-foreground: oklch(0.24 0.025 295);
+    --popover: oklch(0.993 0.003 300);
+    --popover-foreground: oklch(0.24 0.025 295);
+    --primary: oklch(0.47 0.2 293);
+    --primary-foreground: oklch(0.985 0.008 300);
+    --secondary: oklch(0.915 0.045 297);
+    --secondary-foreground: oklch(0.37 0.13 293);
+    --muted: oklch(0.918 0.02 300);
+    --muted-foreground: oklch(0.48 0.035 295);
+    --accent: oklch(0.925 0.045 325);
+    --accent-foreground: oklch(0.39 0.15 325);
+    --destructive: oklch(0.46 0.18 25);
+    --success: oklch(0.48 0.1 160);
+    --warning: oklch(0.5 0.11 62);
+    --border: oklch(0.88 0.022 300);
+    --input: oklch(0.6 0.04 295);
+    --ring: oklch(0.5 0.2 293);
+    --chart-1: oklch(0.45 0.22 290);
+    --chart-2: oklch(0.6 0.13 60);
+    --chart-3: oklch(0.58 0.1 190);
+    --chart-4: oklch(0.64 0.24 330);
+    --chart-5: oklch(0.44 0.1 245);
+    --sidebar: oklch(0.955 0.014 300);
+    --sidebar-foreground: oklch(0.24 0.025 295);
+    --sidebar-primary: oklch(0.47 0.2 293);
+    --sidebar-primary-foreground: oklch(0.985 0.008 300);
+    --sidebar-accent: oklch(0.925 0.045 325);
+    --sidebar-accent-foreground: oklch(0.39 0.15 325);
+    --sidebar-border: oklch(0.88 0.022 300);
+    --sidebar-ring: oklch(0.5 0.2 293);
+}
+
+/* At half opacity the focus halo falls under 3:1 on the soft surfaces: draw it at full strength (unlayered, so it wins over the utilities) */
+.soft :focus-visible {
+    --tw-ring-color: var(--ring);
+    outline-color: var(--ring);
 }
 
 @layer base {

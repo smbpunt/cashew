@@ -6,7 +6,7 @@
     ## bool Whether a credit gets a "+" and its color.
     signed = false
 -%}
-<span {{ attributes.defaults({class: html_classes('tabular-nums whitespace-nowrap', {'text-emerald-600 dark:text-emerald-400': signed and amount > 0})}) }}>
+<span {{ attributes.defaults({class: html_classes('tabular-nums whitespace-nowrap', {'text-success': signed and amount > 0})}) }}>
     {{- signed and amount > 0 ? '+' -}}
     {{- amount|major_units(currency)|format_currency(currency) -}}
 </span>

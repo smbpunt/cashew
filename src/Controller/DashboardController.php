@@ -11,6 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\ValueResolver;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -32,7 +33,7 @@ final class DashboardController extends AbstractController
         MonthlyReportBuilder $reports,
         StatementImportRepository $imports,
         CutoffPolicy $cutoff,
-        #[MapQueryParameter(filter: \FILTER_VALIDATE_REGEXP, options: ['regexp' => '/^\d{4}-(0[1-9]|1[0-2])$/'])] ?string $month = null,
+        #[ValueResolver('month')] ?\DateTimeImmutable $month = null,
         #[MapQueryParameter] ?TransactionListMode $mode = null,
     ): Response {
         $session = $request->getSession();
@@ -43,7 +44,7 @@ final class DashboardController extends AbstractController
         }
 
         try {
-            $report = $reports->build($user, null === $month ? null : new \DateTimeImmutable($month.'-01'));
+            $report = $reports->build($user, $month);
         } catch (\OutOfRangeException $exception) {
             throw $this->createNotFoundException($exception->getMessage(), $exception);
         }

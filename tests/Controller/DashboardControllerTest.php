@@ -2,12 +2,14 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\BankAccount;
+use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Bank;
+use App\Enum\Periodicity;
 use App\Enum\TransactionKind;
+use App\Tests\EntityFactoryTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -17,9 +19,9 @@ use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 final class DashboardControllerTest extends WebTestCase
 {
     use ClockSensitiveTrait;
+    use EntityFactoryTrait;
 
     private KernelBrowser $client;
-    private EntityManagerInterface $entityManager;
     private User $user;
 
     protected function setUp(): void
@@ -48,6 +50,7 @@ final class DashboardControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'No data yet');
+        self::assertSelectorCount(3, 'header [data-controller="theme"] button[aria-pressed]');
         self::assertSelectorNotExists('[data-live-name-value="ImportsInProgress"]');
 
         $this->client->clickLink('Import statements');
@@ -125,14 +128,14 @@ final class DashboardControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('[data-mode="detailed"][aria-current="true"]');
         self::assertSame(
-            ['Account Personal', 'Bank Revolut', 'Category Leisure'],
+            ['Account Personal', 'Bank Revolut', 'Bank category Leisure', 'Category None'],
             $crawler->filter('[data-transaction]:nth-child(4) [data-detail]')->each(static fn ($detail): string => $detail->text()),
         );
         // The whole label, one line per line of the statement
         self::assertSame(['Prélèvement', 'FREE MOBILE'], $crawler->filter('[data-transaction]:nth-child(3) p')->each(static fn ($line): string => $line->text()));
         self::assertSelectorTextContains('[data-transaction]:nth-child(3)', 'Compte de Dépôt');
         self::assertSelectorTextContains('[data-transaction]:nth-child(3)', 'Crédit Agricole');
-        self::assertSelectorNotExists('[data-transaction]:nth-child(3) [data-detail="category"]');
+        self::assertSelectorNotExists('[data-transaction]:nth-child(3) [data-detail="bank_category"]');
         self::assertSelectorTextContains('[data-transaction]:nth-child(2)', 'Deferred debit card');
 
         $this->client->click($crawler->filter('a[rel="prev"]')->link());
@@ -146,6 +149,76 @@ final class DashboardControllerTest extends WebTestCase
 
         $this->client->request('GET', '/dashboard');
         self::assertSelectorExists('[data-mode="simple"][aria-current="true"]');
+    }
+
+    public function testBreaksTheMonthDownByCategory(): void
+    {
+        $this->createTransactions();
+        $home = $this->createCategory($this->user, 'Home');
+        $internet = $this->createCategory($this->user, 'Internet', $home);
+        $leisure = $this->createCategory($this->user, 'Leisure');
+
+        $transactions = $this->entityManager->getRepository(Transaction::class);
+        $free = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"]) ?? throw new \LogicException('No FREE MOBILE.');
+        // The series' category, for its transactions
+        $series = new RecurringSeries($free->getAccount(), 'free mobile', false, 'Free', Periodicity::Monthly, -1999, 90, $free->getDate());
+        $series->confirm('Free', $internet);
+        $this->entityManager->persist($series);
+        $free->attachTo($series);
+        // Its own
+        $transactions->findOneBy(['label' => 'Cinéma'])?->categorize($leisure);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/dashboard?month=2026-09');
+
+        self::assertSame(
+            ['Home -€19.99 Internet -€19.99', 'Leisure -€15.00', 'Uncategorized spending -€62.40'],
+            $crawler->filter('[data-categories="EUR"] > ul > li')->each(static fn ($row): string => (string) preg_replace('/\s+/u', ' ', trim($row->text()))),
+        );
+        self::assertSelectorTextContains('[data-fixed-charges]', '€19.99');
+        self::assertSelectorExists(\sprintf('[data-categories] a[href="/categories/%d?month=2026-09"]', $home->getId()));
+    }
+
+    #[TestWith(['simple'])]
+    #[TestWith(['detailed'])]
+    public function testShowsTheIconOfTheCategoryOfEachTransaction(string $mode): void
+    {
+        $this->createTransactions();
+        $home = $this->createCategory($this->user, 'Home')->setIcon('lucide:house');
+        // Without an icon of its own: that of its parent
+        $internet = $this->createCategory($this->user, 'Internet', $home);
+        $leisure = $this->createCategory($this->user, 'Leisure')->setIcon('lucide:ticket');
+
+        $transactions = $this->entityManager->getRepository(Transaction::class);
+        $free = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"]) ?? throw new \LogicException('No FREE MOBILE.');
+        $series = new RecurringSeries($free->getAccount(), 'free mobile', false, 'Free', Periodicity::Monthly, -1999, 90, $free->getDate());
+        $series->confirm('Free', $internet);
+        $this->entityManager->persist($series);
+        $free->attachTo($series);
+        $transactions->findOneBy(['label' => 'Cinéma'])?->categorize($leisure);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/dashboard?month=2026-09&mode='.$mode);
+
+        // Before the label, a question mark without a category
+        self::assertSame(
+            ['none', 'none', 'lucide:house', 'lucide:ticket', 'none'],
+            $crawler->filter('[data-transaction] [data-category-icon]')->each(static fn ($icon): string => (string) $icon->attr('data-category-icon')),
+        );
+        self::assertSelectorExists('[data-transaction]:nth-child(3) svg[data-category-icon="lucide:house"][aria-hidden="true"]');
+        self::assertSelectorExists('[data-categories] [data-category="Leisure"] svg[data-category-icon="lucide:ticket"]');
+        self::assertSelectorExists('[data-transaction]:nth-child(1) svg[data-category-icon="none"][role="img"][aria-label="No category"][class~="text-muted-foreground/50"]');
+    }
+
+    public function testWithoutCategoriesOnlyShowsTheUncategorizedSpending(): void
+    {
+        $this->createTransactions();
+
+        $this->client->request('GET', '/dashboard?month=2026-09');
+
+        // Uncategorized spending only
+        self::assertSelectorCount(1, '[data-categories] > ul > li');
+        self::assertSelectorNotExists('[data-fixed-charges]');
     }
 
     public function testAnUnknownModeIsNotFound(): void
@@ -193,20 +266,11 @@ final class DashboardControllerTest extends WebTestCase
         self::assertSelectorTextContains('dl', 'Entrées');
     }
 
-    private function createUser(string $login): User
-    {
-        $user = new User()->setLogin($login)->setPassword('not-a-real-hash');
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        return $user;
-    }
-
     private function createTransactions(): void
     {
-        $bank = new BankAccount($this->user, Bank::CreditAgricole, '12345678901', 'Compte de Dépôt', 'EUR');
-        $revolut = new BankAccount($this->user, Bank::Revolut, 'Personal (EUR)', 'Personal', 'EUR');
-        $someoneElses = new BankAccount($this->createUser('bob'), Bank::Revolut, 'Personal (EUR)', 'Personal', 'EUR');
+        $bank = $this->createAccount($this->user, Bank::CreditAgricole, '12345678901');
+        $revolut = $this->createAccount($this->user, Bank::Revolut, 'Personal (EUR)', 'Personal');
+        $someoneElses = $this->createAccount($this->createUser('bob'), Bank::Revolut, 'Personal (EUR)', 'Personal');
 
         foreach ([
             [$bank, '2026-08-31', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000, TransactionKind::Regular, null],
@@ -218,7 +282,6 @@ final class DashboardControllerTest extends WebTestCase
             [$bank, '2026-09-30', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -6240, TransactionKind::DeferredCardSettlement, null],
             [$someoneElses, '2026-09-12', 'Not mine', -99900, TransactionKind::Regular, null],
         ] as $i => [$account, $date, $label, $amount, $kind, $category]) {
-            $this->entityManager->persist($account);
             $this->entityManager->persist(new Transaction($account, null, new \DateTimeImmutable($date), $label, $amount, 'EUR', $kind, $category, 'fingerprint-'.$i));
         }
         $this->entityManager->flush();

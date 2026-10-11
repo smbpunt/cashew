@@ -1,0 +1,81 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ 'review.title'|trans }}{% endblock %}
+
+{% macro period(range, from_to, on) %}
+    {%- set first = range[0]|format_date('medium') -%}
+    {%- set last = range[1]|format_date('medium') -%}
+    {%- if first == last -%}
+        {{ on|trans({date: first}) }}
+    {%- else -%}
+        {{ from_to|trans({first: first, last: last}) }}
+    {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+        <h1 class="text-2xl font-bold tracking-tight">{{ 'review.title'|trans }}</h1>
+        <p class="text-sm text-muted-foreground">{{ 'review.description'|trans }}</p>
+    </div>
+    <twig:Button as="a" href="{{ path('app_dashboard') }}">{{ 'review.continue'|trans }}</twig:Button>
+</div>
+
+{% if imports is not empty %}
+    <section aria-labelledby="imports" class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+            <h2 id="imports" class="font-semibold">{{ 'review.imports.title'|trans({count: imports|length}) }}</h2>
+            {% if periods|length > 1 %}
+                <p class="text-sm font-medium" data-imports-period>{{ _self.period(period, 'review.imports.all_from_to', 'review.imports.all_on') }}</p>
+            {% endif %}
+        </div>
+        <ul class="flex flex-col gap-2">
+            {% for import in imports %}
+                <twig:ImportResult :import="import" :period="periods[import.id] is defined ? _self.period(periods[import.id], 'review.imports.from_to', 'review.imports.on') : null" />
+            {% endfor %}
+        </ul>
+    </section>
+{% endif %}
+
+{% if amount_changes is not empty %}
+    <section aria-labelledby="amount-changes">
+        <twig:Alert>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <twig:Alert:Title><h2 id="amount-changes">{{ 'review.amount_changes.title'|trans({count: amount_changes|length}) }}</h2></twig:Alert:Title>
+            <twig:Alert:Description>
+                <ul class="flex flex-col gap-1">
+                    {% for change in amount_changes %}
+                        {% set transaction = change.transaction %}
+                        <li data-amount-change>
+                            {{ 'review.amount_changes.item'|trans({
+                                series: transaction.recurringSeries.name,
+                                date: transaction.date|format_date('medium'),
+                                amount: transaction.amount|abs|major_units(transaction.currency)|format_currency(transaction.currency),
+                                previous: change.previousAmount|abs|major_units(transaction.currency)|format_currency(transaction.currency),
+                                previous_date: change.previousDate|format_date('medium'),
+                            }) }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </twig:Alert:Description>
+        </twig:Alert>
+    </section>
+{% endif %}
+
+<twig:PendingSeries />
+
+<section aria-labelledby="new-category">
+    <twig:Card>
+        <twig:Card:Header>
+            <twig:Card:Title><h2 id="new-category">{{ 'review.categories.title'|trans }}</h2></twig:Card:Title>
+            <twig:Card:Description>{{ 'review.categories.description'|trans }}</twig:Card:Description>
+        </twig:Card:Header>
+        <twig:Card:Content class="flex flex-col gap-4">
+            {% if not has_categories %}
+                {{ include('category/_seed.html.twig', {redirect: 'app_review'}) }}
+            {% endif %}
+            <twig:CategoryForm />
+        </twig:Card:Content>
+    </twig:Card>
+</section>
+{% endblock %}

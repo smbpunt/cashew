@@ -43,6 +43,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\NotBlank]
     private ?string $password = null;
 
+    /**
+     * Whether they were given the default categories already, for them not to come back once deleted.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $categoriesSeeded = false;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -108,6 +114,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
+
+        return $this;
+    }
+
+    public function hasSeededCategories(): bool
+    {
+        return $this->categoriesSeeded;
+    }
+
+    public function markCategoriesSeeded(): static
+    {
+        $this->categoriesSeeded = true;
 
         return $this;
     }

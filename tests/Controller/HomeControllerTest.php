@@ -15,6 +15,7 @@ final class HomeControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'See where your money goes');
+        self::assertSelectorCount(3, '[data-controller="theme"] button[aria-pressed]');
 
         $client->clickLink('Log in');
         self::assertResponseIsSuccessful();

@@ -1,0 +1,27 @@
+{% set categories = this.categories %}
+<div {{ attributes.defaults({class: 'block'}) }}>
+    {% if categories is empty %}
+        <p class="px-6 py-10 text-center text-sm text-muted-foreground" data-empty>{{ 'category.empty'|trans }}</p>
+    {% else %}
+        <ul class="divide-y">
+            {% for category in categories %}
+                <li class="flex flex-col gap-1 px-4 py-3 sm:px-6" data-category="{{ category.name }}">
+                    <div class="flex items-center justify-between gap-4">
+                        <a href="{{ path('app_category_show', {id: category.id}) }}" class="flex items-center gap-2 font-medium hover:underline">
+                            <twig:CategoryIcon :category="category" />
+                            {{- category.name -}}
+                        </a>
+                        <twig:Button as="a" variant="ghost" size="xs" href="{{ path('app_category_edit', {id: category.id}) }}">{{ 'category.edit.link'|trans }}</twig:Button>
+                    </div>
+                    {% if category.children is not empty %}
+                        <ul class="flex flex-wrap gap-2">
+                            {% for child in category.children %}
+                                <li><twig:Badge as="a" variant="secondary" href="{{ path('app_category_show', {id: child.id}) }}">{{ child.name }}</twig:Badge></li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

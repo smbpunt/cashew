@@ -1,0 +1,20 @@
+<div {{ attributes.defaults({class: 'block'}) }}>
+    {{ form_start(form, {attr: {
+        class: 'grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end',
+        novalidate: 'novalidate',
+        'data-action': 'live#action:prevent',
+        'data-live-action-param': 'save',
+    }}) }}
+        <div class="flex flex-col gap-2">
+            {{ form_label(form.name) }}
+            <div class="flex gap-2">
+                <twig:IconPicker :value="form.icon.vars.value ?: null" key="category-form-icon" />
+                {{ form_widget(form.name) }}
+            </div>
+            {{ form_errors(form.name) }}
+            {{ form_errors(form.icon) }}
+        </div>
+        {{ form_row(form.parent) }}
+        <twig:Button type="submit" variant="outline" data-loading="addAttribute(disabled)">{{ 'category.form.create'|trans }}</twig:Button>
+    {{ form_end(form) }}
+</div>

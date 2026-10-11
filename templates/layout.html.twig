@@ -10,21 +10,41 @@
         <a href="{{ path('app_dashboard') }}" class="me-auto text-lg font-black tracking-tighter sm:me-0">Cashew</a>
 
         <nav aria-label="{{ 'nav.label'|trans }}" class="order-last -mx-2.5 flex w-full items-center gap-1 sm:order-none sm:mx-0 sm:me-auto sm:w-auto">
-            {% for route, label in {app_dashboard: 'nav.dashboard', app_statement_import: 'nav.import'} %}
+            {# Current on the pages under it too: a category, its edition #}
+            {% for item in [
+                {route: 'app_dashboard', label: 'nav.dashboard'},
+                {route: 'app_statement_import', label: 'nav.import'},
+                {route: 'app_categories', label: 'nav.categories', prefix: 'app_category'},
+            ] %}
                 <twig:Button
                     as="a"
                     variant="ghost"
                     size="sm"
-                    href="{{ path(route) }}"
-                    aria-current="{{ app.current_route == route ? 'page' : 'false' }}"
+                    href="{{ path(item.route) }}"
+                    aria-current="{{ (app.current_route ?? '') starts with (item.prefix ?? item.route) ? 'page' : 'false' }}"
                     class="text-muted-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
-                >{{ label|trans }}</twig:Button>
+                >{{ item.label|trans }}</twig:Button>
             {% endfor %}
+            {% set review_count = pending_review_count() %}
+            {% if review_count > 0 or app.current_route == 'app_review' %}
+                <twig:Button
+                    as="a"
+                    variant="ghost"
+                    size="sm"
+                    href="{{ path('app_review') }}"
+                    aria-current="{{ app.current_route == 'app_review' ? 'page' : 'false' }}"
+                    class="text-muted-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                    data-nav-review
+                >
+                    {{ 'nav.review'|trans }}
+                    {% if review_count > 0 %}<twig:Badge class="h-4 min-w-4 px-1 tabular-nums">{{ review_count }}</twig:Badge>{% endif %}
+                </twig:Button>
+            {% endif %}
         </nav>
 
         <div class="flex items-center gap-1">
             <twig:LocaleSwitcher />
-            <twig:ThemeToggle />
+            <twig:ThemeSwitcher />
             <twig:Button as="a" variant="ghost" size="sm" href="{{ logout_path() }}">{{ 'security.log_out'|trans }}</twig:Button>
         </div>
     </div>

@@ -1,0 +1,13 @@
+{%- props
+    ## The category whose icon to show, or that of its parent; a question mark without a category, a blank of the same size without an icon, for the labels to line up.
+    category = null
+-%}
+{%- set icon = category ? category.displayIcon : null -%}
+{%- if category is null -%}
+    {# Lighter than the icons of the categories: something left to do #}
+    <twig:ux:icon name="lucide:circle-question-mark" {{ ...attributes.defaults({class: 'size-4 shrink-0 text-muted-foreground/50'}) }} role="img" aria-label="{{ 'category.icon.uncategorized'|trans }}" title="{{ 'category.icon.uncategorized'|trans }}" data-category-icon="none" />
+{%- elseif icon -%}
+    <twig:ux:icon name="{{ icon }}" {{ ...attributes.defaults({class: 'size-4 shrink-0 text-muted-foreground'}) }} data-category-icon="{{ icon }}" />
+{%- else -%}
+    <span {{ attributes.defaults({class: 'size-4 shrink-0'}) }} aria-hidden="true" data-category-icon></span>
+{%- endif -%}

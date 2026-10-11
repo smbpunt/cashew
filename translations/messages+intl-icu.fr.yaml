@@ -19,9 +19,14 @@ nav:
     label: Principale
     dashboard: Tableau de bord
     import: Importer
+    categories: Catégories
+    review: À revoir
 
 theme:
-    toggle: Basculer le thème sombre
+    label: Thème
+    light: Clair
+    soft: Clair doux
+    dark: Sombre
 
 dashboard:
     title: Tableau de bord
@@ -41,7 +46,15 @@ dashboard:
         account: Compte
         bank: Banque
         category: Catégorie
+        bank_category: Catégorie de la banque
+        series: Récurrent
+        no_category: Aucune
+        from_series: '{category} (récurrent)'
         deferred_card_purchase: Carte à débit différé
+    categories:
+        title: Par catégorie
+        fixed_charges: 'Charges fixes :'
+        uncategorized: Sorties sans catégorie
     importing:
         title: '{count, plural, one {Import de votre relevé en cours…} other {Import de vos # relevés en cours…}}'
         description: 'Cette page se mettra à jour toute seule une fois l’import terminé. Vous pouvez aussi la quitter : vos transactions vous attendront.'
@@ -53,6 +66,125 @@ dashboard:
 
 locale:
     switcher: Langue
+
+review:
+    title: Revue de vos imports
+    description: Des opérations qui reviennent ont été trouvées. Confirmez celles qui en sont, nommez-les et rangez-les dans une catégorie.
+    continue: Continuer vers le tableau de bord
+    imports:
+        title: '{count, plural, one {Relevé importé} other {# relevés importés}}'
+        from_to: 'Du {first} au {last}'
+        on: 'Le {date}'
+        all_from_to: 'Opérations du {first} au {last}'
+        all_on: 'Opérations du {date}'
+    amount_changes:
+        title: '{count, plural, one {Un montant a changé} other {# montants ont changé}}'
+        item: '{series} : {amount} le {date}, au lieu de {previous} le {previous_date}.'
+    suggestions:
+        title: '{count, plural, =0 {Opérations récurrentes} one {# opération récurrente à revoir} other {# opérations récurrentes à revoir}}'
+        description: Abonnements, factures, salaires, prêts… Celles que vous confirmez sont reconnues à chaque import, et comptent dans leur catégorie.
+        empty: Plus rien à revoir.
+    series:
+        name: Nom
+        category: Catégorie
+        no_category: Aucune catégorie
+        confidence: 'sûr à {confidence, number, percent}'
+        occurrences: '{count, plural, one {# occurrence} other {# occurrences}}, la dernière le {last}'
+        confirm: Confirmer
+        reject: Pas récurrent
+    categories:
+        title: Catégories
+        description: 'Regroupez vos dépenses : Maison, avec son énergie, son eau, son prêt…'
+
+recurrence:
+    income: Entrée
+    spending: Sortie
+    periodicity:
+        weekly: Hebdomadaire
+        monthly: Mensuel
+        bimonthly: Bimestriel
+        quarterly: Trimestriel
+        semiannual: Semestriel
+        yearly: Annuel
+
+category:
+    title: Catégories
+    description: 'Ce sur quoi vous dépensez, ou d’où vient l’argent, sur deux niveaux : Maison, et dedans, Énergie, Eau, Prêt…'
+    new: Nouvelle catégorie
+    empty: Aucune catégorie pour l’instant.
+    form:
+        name: Nom
+        parent: Dans
+        no_parent: Aucune (catégorie principale)
+        create: Créer
+    icon:
+        label: Icône
+        choose: Choisir une icône
+        search: 'Rechercher en anglais : home, car…'
+        none: Aucune icône
+        no_results: 'Aucune icône pour « {query} ».'
+        unavailable: La recherche d’icônes est indisponible pour l’instant.
+        uncategorized: Sans catégorie
+    edit:
+        link: Modifier
+        title: 'Modifier « {name} »'
+        submit: Enregistrer
+        cancel: Annuler
+    delete:
+        description: '{count, plural, =0 {Ses transactions resteront sans catégorie.} one {Sa sous-catégorie part avec elle ; leurs transactions resteront sans catégorie.} other {Ses # sous-catégories partent avec elle ; leurs transactions resteront sans catégorie.}}'
+        confirm: 'Supprimer « {name} » ?'
+        submit: Supprimer
+    seed:
+        description: Partez d’un premier jeu de catégories (Maison, Revenus, Abonnements…), à adapter à votre guise.
+        submit: Créer les catégories suggérées
+    show:
+        by_month: Mois par mois
+        average: '{count, plural, one {{amount} sur le mois} other {{amount} par mois en moyenne, sur # mois}}'
+        empty: Aucune transaction dans cette catégorie pour l’instant.
+        no_transactions: Aucune transaction ce mois-ci.
+    defaults:
+        home: Maison
+        rent: Loyer
+        loan: Prêt
+        energy: Énergie
+        water: Eau
+        insurance: Assurance
+        internet: Internet
+        maintenance: Entretien & travaux
+        groceries: Alimentation
+        supermarket: Supermarché
+        restaurants: Restaurants
+        transport: Transport
+        fuel: Carburant
+        public_transport: Transports en commun
+        car_insurance: Assurance auto
+        car_maintenance: Entretien du véhicule
+        tolls_parking: Péages & stationnement
+        subscriptions: Abonnements
+        phone: Téléphone
+        streaming: Streaming
+        health: Santé
+        doctor: Médecin
+        pharmacy: Pharmacie
+        health_insurance: Mutuelle
+        leisure: Loisirs
+        outings: Sorties
+        travel: Voyages
+        sport: Sport
+        shopping: Achats
+        clothing: Vêtements
+        electronics: High-tech
+        gifts: Cadeaux
+        taxes: Impôts
+        income_tax: Impôt sur le revenu
+        local_taxes: Taxes locales
+        bank: Banque
+        bank_fees: Frais bancaires
+        savings: Épargne
+        income: Revenus
+        salary: Salaire
+        benefits: Allocations
+        refunds: Remboursements
 
 security:
     log_out: se déconnecter
@@ -75,6 +207,8 @@ statement:
             title: Import terminé
             redirecting: Direction votre tableau de bord…
             go: Aller au tableau de bord
+            redirecting_review: Direction les opérations récurrentes trouvées…
+            review: Les passer en revue
             flash: '{count, plural, =0 {Relevés importés, sans nouvelle transaction.} one {# transaction importée.} other {# transactions importées.}}'
         result: >-
             {imported, plural, one {# importée} other {# importées}}{skipped, plural, =0 {} one {, # déjà connue} other {, # déjà connues}}{after_cutoff, plural, =0 {} other {, # pour le mois prochain}}

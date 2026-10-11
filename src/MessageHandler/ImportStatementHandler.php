@@ -4,6 +4,7 @@ namespace App\MessageHandler;
 
 use App\Entity\StatementImport;
 use App\Message\ImportStatement;
+use App\Recurrence\RecurrenceDetector;
 use App\Repository\StatementImportRepository;
 use App\Statement\Exception\UnreadableStatementException;
 use App\Statement\Import\StatementImporter;
@@ -25,6 +26,7 @@ final readonly class ImportStatementHandler
     public function __construct(
         private StatementImportRepository $imports,
         private StatementImporter $importer,
+        private RecurrenceDetector $recurrences,
         private StatementStorage $storage,
         private StatementImportNotifier $notifier,
         private ManagerRegistry $doctrine,
@@ -74,9 +76,15 @@ final readonly class ImportStatementHandler
 
         try {
             try {
-                $result = $this->importer->import($import);
-                $import->complete($result->bank, $result->importedCount, $result->skippedCount, $result->afterCutoffCount, $this->clock->now());
-                $this->entityManager()->flush();
+                // All committed at once, with the outcome, or not at all
+                $this->entityManager()->wrapInTransaction(function (EntityManagerInterface $entityManager) use ($import): void {
+                    $result = $this->importer->import($import);
+                    // For the detection to group them with the transactions known already
+                    $entityManager->flush();
+                    $this->recurrences->detect($import->getOwner());
+
+                    $import->complete($result->bank, $result->importedCount, $result->skippedCount, $result->afterCutoffCount, $this->clock->now());
+                });
             } catch (\Throwable $exception) {
                 $import = $this->reload($id) ?? throw $exception;
 

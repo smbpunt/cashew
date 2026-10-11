@@ -19,9 +19,14 @@ nav:
     label: Main
     dashboard: Dashboard
     import: Import
+    categories: Categories
+    review: To review
 
 theme:
-    toggle: Toggle dark mode
+    label: Theme
+    light: Light
+    soft: Soft light
+    dark: Dark
 
 dashboard:
     title: Dashboard
@@ -41,7 +46,15 @@ dashboard:
         account: Account
         bank: Bank
         category: Category
+        bank_category: Bank category
+        series: Recurring
+        no_category: None
+        from_series: '{category} (recurring)'
         deferred_card_purchase: Deferred debit card
+    categories:
+        title: By category
+        fixed_charges: 'Fixed charges:'
+        uncategorized: Uncategorized spending
     importing:
         title: '{count, plural, one {Importing your statement…} other {Importing your # statements…}}'
         description: 'This page updates itself once it''s done. You can also leave: your transactions will be waiting for you.'
@@ -53,6 +66,125 @@ dashboard:
 
 locale:
     switcher: Language
+
+review:
+    title: Review your imports
+    description: Transactions that come back were found. Confirm those that are, name them, and file them in a category.
+    continue: Continue to the dashboard
+    imports:
+        title: '{count, plural, one {Statement imported} other {# statements imported}}'
+        from_to: 'From {first} to {last}'
+        on: 'On {date}'
+        all_from_to: 'Transactions from {first} to {last}'
+        all_on: 'Transactions on {date}'
+    amount_changes:
+        title: '{count, plural, one {An amount changed} other {# amounts changed}}'
+        item: '{series}: {amount} on {date}, instead of {previous} on {previous_date}.'
+    suggestions:
+        title: '{count, plural, =0 {Recurring transactions} one {# recurring transaction to review} other {# recurring transactions to review}}'
+        description: Subscriptions, bills, salaries, loans… Confirmed ones are recognised on each import, and count in their category.
+        empty: Nothing left to review.
+    series:
+        name: Name
+        category: Category
+        no_category: No category
+        confidence: '{confidence, number, percent} sure'
+        occurrences: '{count, plural, one {# occurrence} other {# occurrences}}, the last one on {last}'
+        confirm: Confirm
+        reject: Not recurring
+    categories:
+        title: Categories
+        description: 'Group what you spend on: Home, with its energy, water and loan…'
+
+recurrence:
+    income: Income
+    spending: Spending
+    periodicity:
+        weekly: Weekly
+        monthly: Monthly
+        bimonthly: Every two months
+        quarterly: Quarterly
+        semiannual: Every six months
+        yearly: Yearly
+
+category:
+    title: Categories
+    description: 'What you spend on, or earn from, on two levels: Home, and within it, Energy, Water, Loan…'
+    new: New category
+    empty: No categories yet.
+    form:
+        name: Name
+        parent: Within
+        no_parent: None (top category)
+        create: Create
+    icon:
+        label: Icon
+        choose: Choose an icon
+        search: 'Search in English: home, car…'
+        none: No icon
+        no_results: 'No icon for "{query}".'
+        unavailable: The icons can't be searched right now.
+        uncategorized: No category
+    edit:
+        link: Edit
+        title: 'Edit "{name}"'
+        submit: Save
+        cancel: Cancel
+    delete:
+        description: '{count, plural, =0 {Its transactions will be left without a category.} one {Its subcategory goes with it; their transactions will be left without a category.} other {Its # subcategories go with it; their transactions will be left without a category.}}'
+        confirm: 'Delete "{name}"?'
+        submit: Delete
+    seed:
+        description: Start from a first set of categories (Home, Income, Subscriptions…), to adapt as you like.
+        submit: Create suggested categories
+    show:
+        by_month: Month by month
+        average: '{count, plural, one {{amount} over the month} other {{amount} a month on average, over # months}}'
+        empty: No transactions in this category yet.
+        no_transactions: No transactions this month.
+    defaults:
+        home: Home
+        rent: Rent
+        loan: Loan
+        energy: Energy
+        water: Water
+        insurance: Insurance
+        internet: Internet
+        maintenance: Repairs & upkeep
+        groceries: Groceries
+        supermarket: Supermarket
+        restaurants: Eating out
+        transport: Transport
+        fuel: Fuel
+        public_transport: Public transport
+        car_insurance: Car insurance
+        car_maintenance: Car maintenance
+        tolls_parking: Tolls & parking
+        subscriptions: Subscriptions
+        phone: Phone
+        streaming: Streaming
+        health: Health
+        doctor: Doctor
+        pharmacy: Pharmacy
+        health_insurance: Health insurance
+        leisure: Leisure
+        outings: Going out
+        travel: Travel
+        sport: Sport
+        shopping: Shopping
+        clothing: Clothing
+        electronics: Electronics
+        gifts: Gifts
+        taxes: Taxes
+        income_tax: Income tax
+        local_taxes: Local taxes
+        bank: Banking
+        bank_fees: Bank fees
+        savings: Savings
+        income: Income
+        salary: Salary
+        benefits: Benefits
+        refunds: Refunds
 
 security:
     log_out: log out
@@ -75,6 +207,8 @@ statement:
             title: Import complete
             redirecting: Taking you to your dashboard…
             go: Go to the dashboard
+            redirecting_review: Taking you to the recurring transactions found…
+            review: Review them
             flash: '{count, plural, =0 {Statements imported, with no new transactions.} one {# transaction imported.} other {# transactions imported.}}'
         result: >-
             {imported} imported{skipped, plural, =0 {} other {, # already known}}{after_cutoff, plural, =0 {} other {, # left for next month}}

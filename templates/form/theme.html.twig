@@ -1,0 +1,36 @@
+{% use 'form_div_layout.html.twig' %}
+
+{# The fields of the UI components (Input, Label), for the forms rendered with form_row() #}
+
+{%- block form_row -%}
+    <div class="flex flex-col gap-2">
+        {{- form_label(form) -}}
+        {{- form_widget(form) -}}
+        {{- form_errors(form) -}}
+    </div>
+{%- endblock form_row -%}
+
+{%- block form_label -%}
+    {%- set label_attr = label_attr|merge({class: (label_attr.class|default('') ~ ' flex items-center gap-2 text-sm leading-none font-medium select-none')|trim}) -%}
+    {{- parent() -}}
+{%- endblock form_label -%}
+
+{%- block form_widget_simple -%}
+    {%- set attr = attr|merge({class: (attr.class|default('') ~ ' h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30')|trim}) -%}
+    {%- if errors|length > 0 -%}{%- set attr = attr|merge({'aria-invalid': 'true'}) -%}{%- endif -%}
+    {{- parent() -}}
+{%- endblock form_widget_simple -%}
+
+{%- block choice_widget_collapsed -%}
+    {%- set attr = attr|merge({class: (attr.class|default('') ~ ' h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30 [&>option]:bg-background')|trim}) -%}
+    {%- if errors|length > 0 -%}{%- set attr = attr|merge({'aria-invalid': 'true'}) -%}{%- endif -%}
+    {{- parent() -}}
+{%- endblock choice_widget_collapsed -%}
+
+{%- block form_errors -%}
+    {%- if errors|length > 0 -%}
+        <ul class="text-sm text-destructive">
+            {%- for error in errors -%}<li>{{ error.message }}</li>{%- endfor -%}
+        </ul>
+    {%- endif -%}
+{%- endblock form_errors -%}

@@ -1,0 +1,97 @@
+{% extends 'layout.html.twig' %}
+
+{% set category = history.category %}
+
+{% block title %}{{ category.path }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+        {% if category.parent %}
+            <a href="{{ path('app_category_show', {id: category.parent.id}) }}" class="text-sm text-muted-foreground hover:underline">{{ category.parent.name }}</a>
+        {% endif %}
+        <h1 class="text-2xl font-bold tracking-tight">{{ category.name }}</h1>
+        {% if category.children is not empty %}
+            <ul class="flex flex-wrap gap-2 pt-1">
+                {% for child in category.children %}
+                    <li><twig:Badge as="a" variant="secondary" href="{{ path('app_category_show', {id: child.id}) }}">{{ child.name }}</twig:Badge></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+    <twig:Button as="a" variant="outline" size="sm" href="{{ path('app_category_edit', {id: category.id}) }}">{{ 'category.edit.link'|trans }}</twig:Button>
+</div>
+
+{% if history.amounts is empty %}
+    <twig:Card class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'category.show.empty'|trans }}</twig:Card>
+{% endif %}
+
+{% for currency, amounts in history.amounts %}
+    {% set max = history.maxAmount(currency) %}
+    {% set average = history.average(currency) %}
+    <twig:Card data-currency="{{ currency }}">
+        <twig:Card:Header>
+            <twig:Card:Title><h2>{{ 'category.show.by_month'|trans }}</h2></twig:Card:Title>
+            <twig:Card:Description>
+                {{ 'category.show.average'|trans({amount: average|major_units(currency)|format_currency(currency), count: history.months|length}) }}
+            </twig:Card:Description>
+        </twig:Card:Header>
+        <twig:Card:Content>
+            {# Columns from one baseline, at scale with the largest month; the average as a dashed line #}
+            <div class="relative flex h-48 items-stretch gap-1 border-b border-border" role="list" aria-label="{{ 'category.show.by_month'|trans }}">
+                {% if average != 0 %}
+                    <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 border-t border-dashed border-muted-foreground/50" style="bottom: {{ (average|abs / max * 100)|round(2) }}%"></div>
+                {% endif %}
+                {% for month in history.months %}
+                    {% set key = month|date('Y-m') %}
+                    {% set amount = amounts[key] %}
+                    {% set selected = key == history.month|date('Y-m') %}
+                    {% set label = month|format_date(pattern: 'LLLL y')|capitalize ~ ' : ' ~ amount|major_units(currency)|format_currency(currency) %}
+                    <a role="listitem" href="{{ path('app_category_show', {id: category.id, month: key}) }}"
+                        class="group relative flex flex-1 items-end justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        aria-label="{{ label }}" aria-current="{{ selected ? 'true' : 'false' }}" data-month="{{ key }}" data-amount="{{ amount }}"
+                    >
+                        <span class="w-full max-w-6 rounded-t-[4px] {{ selected ? 'bg-primary' : 'bg-primary/35 group-hover:bg-primary/60 soft:bg-primary/70 soft:group-hover:bg-primary/85' }}" style="height: {{ (amount|abs / max * 100)|round(2) }}%"></span>
+                        <span role="tooltip" class="pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded-md bg-popover px-2 py-1 text-xs whitespace-nowrap text-popover-foreground shadow-md ring-1 ring-foreground/10 group-hover:block group-focus-visible:block">{{ label }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+            <div aria-hidden="true" class="mt-1 flex gap-1 text-[0.65rem] text-muted-foreground">
+                {% for month in history.months %}
+                    <span class="flex-1 truncate text-center {{ month|date('Y-m') == history.month|date('Y-m') ? 'font-medium text-foreground' }}">{{ month|format_date(pattern: 'MMM') }}</span>
+                {% endfor %}
+            </div>
+        </twig:Card:Content>
+    </twig:Card>
+{% endfor %}
+
+{% if history.amounts is not empty %}
+    <twig:Card class="gap-0 py-0">
+        <div class="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
+            <h2 class="font-semibold">{{ history.month|format_date(pattern: 'LLLL y')|capitalize }}</h2>
+            {% for currency, amounts in history.amounts %}
+                <twig:Money :amount="amounts[history.month|date('Y-m')]" :currency="currency" signed class="font-semibold" />
+            {% endfor %}
+        </div>
+        {% if history.transactions is empty %}
+            <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'category.show.no_transactions'|trans }}</p>
+        {% else %}
+            <ul class="divide-y">
+                {% for transaction in history.transactions %}
+                    {% set label = transaction.recurring ? transaction.recurringSeries.name : transaction.oneLineLabel %}
+                    <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
+                        <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">{{ transaction.date|format_date(pattern: 'd MMM') }}</time>
+                        <div class="flex min-w-0 flex-1 flex-col">
+                            <p class="truncate text-sm font-medium" title="{{ label }}">{{ label }}</p>
+                            {% if transaction.effectiveCategory != category %}
+                                <p class="text-xs text-muted-foreground">{{ transaction.effectiveCategory.name }}</p>
+                            {% endif %}
+                        </div>
+                        <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </twig:Card>
+{% endif %}
+{% endblock %}

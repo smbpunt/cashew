@@ -17,3 +17,15 @@ framework:
         # Namespaced pools use the above "app" backend by default
         #pools:
             #my.dedicated.cache: null
+
+        pools:
+            # The icons found for a search, for a day
+            iconify.cache:
+                adapter: cache.app
+
+when@test:
+    framework:
+        cache:
+            pools:
+                iconify.cache:
+                    adapter: cache.adapter.array

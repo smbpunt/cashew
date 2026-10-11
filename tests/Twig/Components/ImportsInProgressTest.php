@@ -2,9 +2,12 @@
 
 namespace App\Tests\Twig\Components;
 
+use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\User;
 use App\Enum\Bank;
+use App\Enum\Periodicity;
+use App\Tests\EntityFactoryTrait;
 use App\Twig\Components\ImportsInProgress;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -16,9 +19,9 @@ use Symfony\UX\LiveComponent\Test\TestLiveComponent;
 final class ImportsInProgressTest extends WebTestCase
 {
     use ClockSensitiveTrait;
+    use EntityFactoryTrait;
     use InteractsWithLiveComponents;
 
-    private EntityManagerInterface $entityManager;
     private User $user;
 
     protected function setUp(): void
@@ -63,6 +66,25 @@ final class ImportsInProgressTest extends WebTestCase
         self::assertTrue($component->response()->isRedirect('/dashboard'));
     }
 
+    public function testGoesToTheReviewOfTheRecurringTransactionsFoundByTheImportsItFollowed(): void
+    {
+        $history = $this->createImport($this->user, 'history.csv');
+        $this->entityManager->persist(new RecurringSeries($this->createAccount($this->user), 'free mobile', false, 'Free Mobile', Periodicity::Monthly, -1999, 90, new \DateTimeImmutable('2026-09-15')));
+        $this->entityManager->flush();
+
+        $component = $this->component();
+        self::assertStringContainsString('history.csv', (string) $component->render());
+
+        // The kernel rebooted with the request: through its current entity manager
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->find(StatementImport::class, $history->getId())?->complete(Bank::CreditAgricole, 26, 0, 0, new \DateTimeImmutable());
+        $entityManager->flush();
+        $component->call('refresh');
+
+        // For it to sum up the import
+        self::assertTrue($component->response()->isRedirect(\sprintf('/review?imports%%5B0%%5D=%d', $history->getId())));
+    }
+
     public function testRequiresALoggedInUser(): void
     {
         $this->expectException(AccessDeniedException::class);
@@ -73,15 +95,6 @@ final class ImportsInProgressTest extends WebTestCase
     private function component(): TestLiveComponent
     {
         return $this->createLiveComponent(ImportsInProgress::class)->actingAs($this->user);
-    }
-
-    private function createUser(string $login): User
-    {
-        $user = new User()->setLogin($login)->setPassword('not-a-real-hash');
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        return $user;
     }
 
     private function createImport(User $owner, string $filename): StatementImport

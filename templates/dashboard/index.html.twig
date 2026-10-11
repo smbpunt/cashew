@@ -32,7 +32,7 @@
         {% for totals in report.totals %}
             <dl class="grid gap-4 sm:grid-cols-3" data-currency="{{ totals.currency }}">
                 {% for tile in [
-                    {label: 'dashboard.income', amount: totals.income, class: 'text-emerald-600 dark:text-emerald-400'},
+                    {label: 'dashboard.income', amount: totals.income, class: 'text-success'},
                     {label: 'dashboard.spending', amount: -totals.spending},
                     {label: 'dashboard.balance', amount: totals.balance, signed: true},
                 ] %}
@@ -44,6 +44,49 @@
                     </twig:Card>
                 {% endfor %}
             </dl>
+        {% endfor %}
+
+        {% for breakdown in report.categories|filter(breakdown => not breakdown.empty) %}
+            <twig:Card class="gap-0 py-0" data-categories="{{ breakdown.currency }}">
+                <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-4 py-3 sm:px-6">
+                    <h2 class="font-semibold">{{ 'dashboard.categories.title'|trans }}</h2>
+                    {% if breakdown.fixedCharges != 0 %}
+                        <p class="text-sm text-muted-foreground" data-fixed-charges>
+                            {{ 'dashboard.categories.fixed_charges'|trans }}
+                            <twig:Money :amount="breakdown.fixedCharges" :currency="breakdown.currency" class="font-medium text-foreground" />
+                        </p>
+                    {% endif %}
+                </div>
+                <ul class="divide-y">
+                    {% for total in breakdown.categories %}
+                        <li class="flex flex-col gap-1 px-4 py-2.5 sm:px-6" data-category="{{ total.category.name }}">
+                            <div class="flex items-center justify-between gap-4">
+                                <a href="{{ path('app_category_show', {id: total.category.id, month: report.month|date('Y-m')}) }}" class="flex items-center gap-2 text-sm font-medium hover:underline">
+                                    <twig:CategoryIcon :category="total.category" />
+                                    {{- total.category.name -}}
+                                </a>
+                                <twig:Money :amount="total.amount" :currency="breakdown.currency" signed class="text-sm font-medium" />
+                            </div>
+                            {% if total.children is not empty %}
+                                <ul class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                                    {% for child in total.children %}
+                                        <li class="flex gap-1" data-category="{{ child.category.name }}">
+                                            <a href="{{ path('app_category_show', {id: child.category.id, month: report.month|date('Y-m')}) }}" class="hover:underline">{{ child.category.name }}</a>
+                                            <twig:Money :amount="child.amount" :currency="breakdown.currency" signed />
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                    {% if breakdown.uncategorizedSpending != 0 %}
+                        <li class="flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-muted-foreground sm:px-6" data-uncategorized>
+                            <span>{{ 'dashboard.categories.uncategorized'|trans }}</span>
+                            <twig:Money :amount="breakdown.uncategorizedSpending" :currency="breakdown.currency" />
+                        </li>
+                    {% endif %}
+                </ul>
+            </twig:Card>
         {% endfor %}
 
         {# The mode switches within the frame: only the list reloads, and the page keeps its scroll #}
@@ -77,6 +120,7 @@
                                 <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">
                                     {{- transaction.date|format_date(pattern: 'd MMM') -}}
                                 </time>
+                                <twig:CategoryIcon :category="transaction.effectiveCategory" class="mt-0.5" />
                                 <div class="flex min-w-0 flex-1 flex-col gap-1">
                                     <div>
                                         <p class="text-sm font-medium break-words">{{ label|first }}</p>
@@ -88,13 +132,15 @@
                                         {% for term, value in {
                                             'dashboard.detail.account': transaction.account.label,
                                             'dashboard.detail.bank': transaction.account.bank.label,
-                                            'dashboard.detail.category': transaction.bankCategory,
+                                            'dashboard.detail.bank_category': transaction.bankCategory,
+                                            'dashboard.detail.series': transaction.recurring ? transaction.recurringSeries.name : null,
                                         }|filter(value => value) %}
                                             <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
                                                 <dt class="font-medium">{{ term|trans }}</dt>
                                                 <dd>{{ value }}</dd>
                                             </div>
                                         {% endfor %}
+                                        <twig:TransactionCategory :transaction="transaction" key="transaction-category-{{ transaction.id }}" />
                                         {% if transaction.kind.value == 'deferred_card_purchase' %}
                                             <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
                                         {% endif %}
@@ -107,11 +153,12 @@
                 {% else %}
                     <ul class="divide-y">
                         {% for transaction in report.transactions %}
-                            {% set label = transaction.label|split("\n")|join(' · ') %}
+                            {% set label = transaction.oneLineLabel %}
                             <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
                                 <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
                                     {{- transaction.date|format_date(pattern: 'd MMM') -}}
                                 </time>
+                                <twig:CategoryIcon :category="transaction.effectiveCategory" />
                                 <p class="min-w-0 flex-1 truncate text-sm font-medium" title="{{ label }}">{{ label }}</p>
                                 <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
                             </li>

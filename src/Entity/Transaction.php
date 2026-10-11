@@ -18,6 +18,20 @@ class Transaction
     #[ORM\Column]
     private ?int $id = null;
 
+    /**
+     * The recurring series it belongs to, suggested or confirmed.
+     */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?RecurringSeries $recurringSeries = null;
+
+    /**
+     * The category the user gave it, over that of its series.
+     */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Category $category = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -82,6 +96,14 @@ class Transaction
         return $this->label;
     }
 
+    /**
+     * Its label on one line: "Prélèvement · FREE MOBILE".
+     */
+    public function getOneLineLabel(): string
+    {
+        return implode(' · ', explode("\n", $this->label));
+    }
+
     public function getAmount(): int
     {
         return $this->amount;
@@ -114,5 +136,49 @@ class Transaction
     public function getFingerprint(): string
     {
         return $this->fingerprint;
+    }
+
+    public function getRecurringSeries(): ?RecurringSeries
+    {
+        return $this->recurringSeries;
+    }
+
+    public function attachTo(?RecurringSeries $series): void
+    {
+        $this->recurringSeries = $series;
+    }
+
+    public function getCategory(): ?Category
+    {
+        return $this->category;
+    }
+
+    public function categorize(?Category $category): void
+    {
+        $this->category = $category;
+    }
+
+    /**
+     * The category of its series, once the user confirmed it.
+     */
+    public function getSeriesCategory(): ?Category
+    {
+        return $this->isRecurring() ? $this->recurringSeries?->getCategory() : null;
+    }
+
+    /**
+     * The category it counts in: its own, or else that of its series.
+     */
+    public function getEffectiveCategory(): ?Category
+    {
+        return $this->category ?? $this->getSeriesCategory();
+    }
+
+    /**
+     * Whether it's one of a series the user confirmed: a fixed charge, or a regular income.
+     */
+    public function isRecurring(): bool
+    {
+        return true === $this->recurringSeries?->isConfirmed();
     }
 }
