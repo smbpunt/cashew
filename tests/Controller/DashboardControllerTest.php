@@ -151,6 +151,40 @@ final class DashboardControllerTest extends WebTestCase
         self::assertSelectorExists('[data-mode="simple"][aria-current="true"]');
     }
 
+    #[TestWith(['simple'])]
+    #[TestWith(['detailed'])]
+    public function testNamesTheTransactionsOfAConfirmedSeriesAfterIt(string $mode): void
+    {
+        $this->createTransactions();
+
+        $transactions = $this->entityManager->getRepository(Transaction::class);
+        $free = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"]) ?? throw new \LogicException('No FREE MOBILE.');
+        $series = new RecurringSeries($free->getAccount(), 'free mobile', false, 'free mobile', Periodicity::Monthly, -1999, 90, $free->getDate());
+        $series->confirm('Phone plan', null);
+        $this->entityManager->persist($series);
+        $free->attachTo($series);
+        // Only suggested: not named after it yet
+        $cinema = $transactions->findOneBy(['label' => 'Cinéma']) ?? throw new \LogicException('No Cinéma.');
+        $suggested = new RecurringSeries($cinema->getAccount(), 'cinema', false, 'Movies', Periodicity::Monthly, -1500, 60, $cinema->getDate());
+        $this->entityManager->persist($suggested);
+        $cinema->attachTo($suggested);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/dashboard?month=2026-09&mode='.$mode);
+
+        self::assertSelectorTextSame('[data-transaction]:nth-child(3) p', 'Phone plan');
+        self::assertSelectorTextSame('[data-transaction]:nth-child(4) p', 'Cinéma');
+        if ('simple' === $mode) {
+            // The label of the statement, on hover
+            self::assertSelectorExists('[data-transaction]:nth-child(3) p[title="Prélèvement · FREE MOBILE"]');
+        } else {
+            // Over the whole label, and marked as recurring
+            self::assertSame(['Phone plan', 'Prélèvement', 'FREE MOBILE'], $crawler->filter('[data-transaction]:nth-child(3) p')->each(static fn ($line): string => $line->text()));
+            self::assertSelectorTextSame('[data-transaction]:nth-child(3) [data-recurring]', 'Recurring');
+            self::assertSelectorNotExists('[data-transaction]:nth-child(4) [data-recurring]');
+        }
+    }
+
     public function testBreaksTheMonthDownByCategory(): void
     {
         $this->createTransactions();

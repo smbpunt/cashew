@@ -123,8 +123,9 @@
                                 <twig:CategoryIcon :category="transaction.effectiveCategory" class="mt-0.5" />
                                 <div class="flex min-w-0 flex-1 flex-col gap-1">
                                     <div>
-                                        <p class="text-sm font-medium break-words">{{ label|first }}</p>
-                                        {% for line in label|slice(1) %}
+                                        {# The name of its series first, over the whole label #}
+                                        <p class="text-sm font-medium break-words">{{ transaction.recurring ? transaction.name : label|first }}</p>
+                                        {% for line in transaction.recurring ? label : label|slice(1) %}
                                             <p class="text-xs break-words text-muted-foreground">{{ line }}</p>
                                         {% endfor %}
                                     </div>
@@ -133,7 +134,6 @@
                                             'dashboard.detail.account': transaction.account.label,
                                             'dashboard.detail.bank': transaction.account.bank.label,
                                             'dashboard.detail.bank_category': transaction.bankCategory,
-                                            'dashboard.detail.series': transaction.recurring ? transaction.recurringSeries.name : null,
                                         }|filter(value => value) %}
                                             <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
                                                 <dt class="font-medium">{{ term|trans }}</dt>
@@ -141,6 +141,9 @@
                                             </div>
                                         {% endfor %}
                                         <twig:TransactionCategory :transaction="transaction" key="transaction-category-{{ transaction.id }}" />
+                                        {% if transaction.recurring %}
+                                            <twig:Badge variant="secondary" data-recurring>{{ 'dashboard.detail.series'|trans }}</twig:Badge>
+                                        {% endif %}
                                         {% if transaction.kind.value == 'deferred_card_purchase' %}
                                             <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
                                         {% endif %}
@@ -153,13 +156,12 @@
                 {% else %}
                     <ul class="divide-y">
                         {% for transaction in report.transactions %}
-                            {% set label = transaction.oneLineLabel %}
                             <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
                                 <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
                                     {{- transaction.date|format_date(pattern: 'd MMM') -}}
                                 </time>
                                 <twig:CategoryIcon :category="transaction.effectiveCategory" />
-                                <p class="min-w-0 flex-1 truncate text-sm font-medium" title="{{ label }}">{{ label }}</p>
+                                <p class="min-w-0 flex-1 truncate text-sm font-medium" title="{{ transaction.oneLineLabel }}">{{ transaction.name }}</p>
                                 <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
                             </li>
                         {% endfor %}

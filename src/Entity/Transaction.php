@@ -104,6 +104,14 @@ class Transaction
         return implode(' · ', explode("\n", $this->label));
     }
 
+    /**
+     * What the user knows it as: the name they gave its series, or else its label on one line.
+     */
+    public function getName(): string
+    {
+        return $this->isRecurring() ? $this->recurringSeries->getName() : $this->getOneLineLabel();
+    }
+
     public function getAmount(): int
     {
         return $this->amount;
