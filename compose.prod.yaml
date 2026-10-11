@@ -10,3 +10,16 @@ services:
       APP_SECRET: ${APP_SECRET}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+    volumes:
+      # Uploaded statements wait there for the worker
+      - share_data:/app/var/share
+
+  worker:
+    image: ${IMAGES_PREFIX:-}app-php-prod
+    environment:
+      APP_SECRET: ${APP_SECRET}
+    volumes:
+      - share_data:/app/var/share
+
+volumes:
+  share_data:

@@ -48,6 +48,19 @@ services:
       php:
         condition: service_healthy
     restart: unless-stopped
+  # Restart it after changing the code it runs: "docker compose restart worker"
+  worker:
+    # Same image as php, which builds it
+    image: ${IMAGES_PREFIX:-}app-php-dev
+    pull_policy: never
+    command: ["php", "bin/console", "messenger:consume", "async", "-vv", "--time-limit=3600", "--memory-limit=256M"]
+    # php's mounts, including its /app/var volume, where uploaded statements wait for the worker
+    volumes_from:
+      - php
+    environment:
+      APP_ENV: "${APP_ENV:-dev}"
+      XDEBUG_MODE: "off"
+
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 
