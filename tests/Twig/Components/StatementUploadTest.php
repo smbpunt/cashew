@@ -71,9 +71,18 @@ final class StatementUploadTest extends WebTestCase
         self::assertCount(2, $component->getEmittedEvents($rendered));
         self::assertNotNull($component->getEmittedEvent($rendered, 'statement:imported'));
 
+        // All done: says so, then leaves for the dashboard
+        self::assertStringContainsString('Import complete', (string) $rendered);
+        self::assertCount(1, $rendered->crawler()->filter('[data-controller="import-complete"][data-import-complete-url-value="/dashboard"]'));
+        self::assertCount(0, $rendered->crawler()->filter('form'));
+
         // Announced once only
         $rendered = $component->call('refresh')->render();
         self::assertCount(0, $component->getEmittedEvents($rendered));
+
+        $this->client->request('GET', '/dashboard');
+        self::assertSelectorCount(1, 'main > [data-slot="alert"]');
+        self::assertSelectorTextContains('main > [data-slot="alert"]', '15 transactions imported.');
 
         // Then each month's statement
         self::assertStringContainsString('Once a month is over', (string) $this->component()->render());
@@ -88,6 +97,29 @@ final class StatementUploadTest extends WebTestCase
 
         self::assertCount(1, $rendered->crawler()->filter('[data-import-status="failed"]'));
         self::assertStringContainsString('This file isn&#039;t a statement export from a supported bank.', (string) $rendered);
+        // Stays for the user to read why, and to upload another file
+        self::assertCount(0, $rendered->crawler()->filter('[data-controller="import-complete"]'));
+        self::assertCount(1, $rendered->crawler()->filter('form'));
+        self::assertCount(1, $rendered->crawler()->filter('a[href="/dashboard"]'));
+    }
+
+    public function testFollowsTheImportsStillInProgressWhenOpenedAgain(): void
+    {
+        $this->upload($this->component(), $this->file('credit_agricole.csv'));
+
+        $rendered = $this->component()->render();
+
+        self::assertCount(1, $rendered->crawler()->filter('[data-import-status="pending"]'));
+        self::assertStringContainsString('data-poll="delay(10000)|refresh"', (string) $rendered);
+        self::assertStringContainsString('You can leave this page', (string) $rendered);
+
+        // Over: no longer followed (through the current entity manager, the kernel rebooted with the requests)
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        foreach ($entityManager->getRepository(StatementImport::class)->findAll() as $import) {
+            $import->fail('statement.error.unexpected', [], new \DateTimeImmutable());
+        }
+        $entityManager->flush();
+        self::assertCount(0, $this->component()->render()->crawler()->filter('[data-import-status]'));
     }
 
     public function testRefusesAFileAlreadyImported(): void

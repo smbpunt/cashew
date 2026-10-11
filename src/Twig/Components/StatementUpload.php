@@ -4,6 +4,7 @@ namespace App\Twig\Components;
 
 use App\Entity\StatementImport;
 use App\Entity\User;
+use App\Enum\ImportStatus;
 use App\Form\StatementUploadType;
 use App\Repository\StatementImportRepository;
 use App\Repository\TransactionRepository;
@@ -17,7 +18,10 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
@@ -27,7 +31,8 @@ use Symfony\UX\LiveComponent\DefaultActionTrait;
 
 /**
  * Uploads statements, then follows their imports until they're over: the Messenger worker announces each status
- * change through Mercure, and the component also polls in case that update is missed.
+ * change through Mercure, and the component also polls in case that update is missed. Once they're all done, it says
+ * so, and leaves for the dashboard.
  *
  * Emits "statement:imported" with the import's id when an import is done, for the rest of the page to refresh.
  */
@@ -39,7 +44,7 @@ final class StatementUpload
     use DefaultActionTrait;
 
     /**
-     * The imports uploaded through this component, most recent first.
+     * The imports followed: those in progress when the page was opened, then those uploaded; most recent first.
      *
      * @var list<int>
      */
@@ -53,6 +58,12 @@ final class StatementUpload
      */
     #[LiveProp]
     public array $announcedIds = [];
+
+    /**
+     * Whether the imports followed are all done: the dashboard shows next.
+     */
+    #[LiveProp]
+    public bool $completed = false;
 
     /**
      * Counts uploads, for each of them to start over with an empty dropzone.
@@ -82,7 +93,23 @@ final class StatementUpload
         private readonly CutoffPolicy $cutoff,
         private readonly Security $security,
         private readonly TranslatorInterface $translator,
+        private readonly RequestStack $requestStack,
     ) {
+    }
+
+    public function mount(): void
+    {
+        // Mounted before IsGranted is checked, which refuses the component to an anonymous user anyway
+        $user = $this->security->getUser();
+        if (!$user instanceof User) {
+            return;
+        }
+
+        // Back on the page: the imports still in progress, whichever page they were uploaded from
+        $this->importIds = array_reverse(array_map(
+            static fn (StatementImport $import): int => (int) $import->getId(),
+            $this->importRepository->findInProgress($user),
+        ));
     }
 
     #[LiveAction]
@@ -117,7 +144,19 @@ final class StatementUpload
     #[LiveAction]
     public function refresh(): void
     {
-        foreach ($this->getImports() as $import) {
+        $imports = $this->getImports();
+
+        if (!$this->completed && [] !== $imports && array_all($imports, static fn (StatementImport $import): bool => ImportStatus::Done === $import->getStatus())) {
+            $this->completed = true;
+
+            $session = $this->requestStack->getSession();
+            \assert($session instanceof FlashBagAwareSessionInterface);
+            $session->getFlashBag()->add('success', new TranslatableMessage('statement.import.completed.flash', [
+                'count' => array_sum(array_map(static fn (StatementImport $import): int => $import->getImportedCount(), $imports)),
+            ]));
+        }
+
+        foreach ($imports as $import) {
             $id = (int) $import->getId();
             if ($import->getStatus()->isFinished() && !\in_array($id, $this->announcedIds, true)) {
                 $this->announcedIds[] = $id;

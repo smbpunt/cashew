@@ -9,6 +9,27 @@
         ></div>
     {% endif %}
 
+    {% if completed %}
+        {% set dashboard_url = path('app_dashboard') %}
+        <div role="status" class="flex flex-col items-center gap-3 py-4 text-center"
+            data-controller="import-complete"
+            data-import-complete-url-value="{{ dashboard_url }}"
+            data-import-complete-delay-value="1800"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="import-check size-16 text-emerald-500">
+                <circle cx="26" cy="26" r="24"/>
+                <path d="M15 27l7 7 15-15"/>
+            </svg>
+            <p class="text-lg font-semibold tracking-tight motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:delay-500 motion-safe:fill-mode-both">{{ 'statement.import.completed.title'|trans }}</p>
+            <p class="text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:delay-700 motion-safe:fill-mode-both">
+                {{ 'statement.import.completed.redirecting'|trans }}
+                <a href="{{ dashboard_url }}" class="font-medium text-foreground underline underline-offset-4">{{ 'statement.import.completed.go'|trans }}</a>
+            </p>
+            <div aria-hidden="true" class="h-1 w-40 overflow-hidden rounded-full bg-muted">
+                <div class="import-redirect-bar h-full rounded-full bg-emerald-500 [--import-redirect-delay:1.8s]"></div>
+            </div>
+        </div>
+    {% else %}
     <div class="flex flex-col gap-1 text-sm text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground">
         {# Our own catalogs, without user data: their markup is safe #}
         <p>{{ (this.firstImport ? 'statement.upload.intro.first' : 'statement.upload.intro.monthly')|trans|raw }}</p>
@@ -47,6 +68,13 @@
             <span data-loading="show" hidden>{{ 'statement.upload.uploading'|trans }}</span>
         </twig:Button>
     {{ form_end(this.form, {render_rest: false}) }}
+    {% endif %}
+
+    {% if this.processing %}
+        <p class="text-sm text-muted-foreground">{{ 'statement.upload.leave'|trans }}</p>
+    {% elseif this.imports is not empty and not completed %}
+        <twig:Button as="a" variant="outline" href="{{ path('app_dashboard') }}" class="self-start">{{ 'statement.import.completed.go'|trans }}</twig:Button>
+    {% endif %}
 
     {% if this.imports is not empty %}
         <ul class="flex flex-col gap-2" aria-live="polite" aria-label="{{ 'statement.upload.imports'|trans }}">

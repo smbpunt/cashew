@@ -164,3 +164,72 @@
         content: "×";
     }
 }
+
+/* An import is over: its check mark draws itself, then a bar fills up until the dashboard shows */
+@layer components {
+    .import-check circle {
+        stroke-dasharray: 151;
+        stroke-dashoffset: 151;
+        animation: import-check-draw 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+
+    .import-check path {
+        stroke-dasharray: 36;
+        stroke-dashoffset: 36;
+        animation: import-check-draw 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+    }
+
+    .import-check {
+        animation: import-check-pop 0.4s ease-out 0.75s both;
+    }
+
+    .import-redirect-bar {
+        transform-origin: left;
+        animation: import-redirect-fill var(--import-redirect-delay, 1.8s) linear forwards;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .import-check,
+        .import-check circle,
+        .import-check path,
+        .import-redirect-bar {
+            animation: none;
+            stroke-dashoffset: 0;
+        }
+    }
+}
+
+@keyframes import-check-draw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes import-check-pop {
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+@keyframes import-redirect-fill {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
+/* Turbo crossfades from one page to the next (see the view-transition meta in base.html.twig) */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
+}
