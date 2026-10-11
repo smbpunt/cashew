@@ -61,7 +61,7 @@ security-audit: ## Composer security audit
 
 ## ---- Tests ----
 
-phpunit: ## PHPUnit - all tests
+phpunit: test-db ## PHPUnit - all tests
 	@echo "Running PHPUnit tests…"
 	$(PHP) vendor/bin/phpunit --testdox
 

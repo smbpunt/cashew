@@ -1,12 +1,12 @@
-.PHONY: build up start down logs bash test migrate vendor assets tailwind
+.PHONY: build up start down logs bash test migrate test-db vendor assets tailwind
 
 ## ---- Docker ----
 
 build: ## Build Docker images
 	@$(DOCKER_COMP) build --pull --no-cache
 
-up: ## Start containers (detached)
-	@$(DOCKER_COMP) up --detach
+up: ## Start containers (detached) and wait until they are healthy
+	@$(DOCKER_COMP) up --detach --wait
 
 start: build up migrate ## Build, start containers and run release tasks
 
@@ -19,15 +19,22 @@ logs: ## Tail containers logs
 bash: ## Bash into the php container
 	@$(PHP_CONT) bash
 
-test: ## Run PHPUnit, pass options via c="...", e.g. make test c="--group e2e --stop-on-failure"
+test: test-db ## Run PHPUnit, pass options via c="...", e.g. make test c="--group e2e --stop-on-failure"
 	@$(eval c ?=)
 	@$(PHPUNIT) $(c)
 
 ## ---- Database ----
 
-migrate: ## Release tasks: messenger transports + migrations
-	@$(SYMFONY) messenger:setup-transports
+# Migrations are the only source of the database schema, Messenger's Doctrine table included
+# (MESSENGER_TRANSPORT_DSN has auto_setup=0). Don't add "messenger:setup-transports" here: it would
+# create that table outside migrations, and the next "make:migration" would then leave it out.
+migrate: ## Run the database migrations
 	@$(SYMFONY) doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+
+test-db: ## Recreate the test database from the migrations
+	@$(SYMFONY) doctrine:database:drop --env=test --force --if-exists
+	@$(SYMFONY) doctrine:database:create --env=test
+	@$(SYMFONY) doctrine:migrations:migrate --env=test --no-interaction --all-or-nothing --allow-no-migration
 
 ## ---- Vendor ----
 
