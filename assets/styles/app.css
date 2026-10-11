@@ -123,3 +123,44 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Symfony UX Dropzone, restyled with the theme (its own stylesheet is disabled in controllers.json) */
+@layer components {
+    .dropzone-container {
+        @apply relative flex min-h-32 flex-col items-stretch justify-center gap-3 rounded-lg border-2 border-dashed border-input bg-muted/30 p-6 text-sm transition-colors;
+    }
+
+    .dropzone-container:hover,
+    .dropzone-container:focus-within {
+        @apply border-ring bg-muted/60;
+    }
+
+    /* Invisible, over the whole zone: clicking or dropping anywhere picks files */
+    .dropzone-input {
+        @apply absolute inset-0 z-1 block size-full cursor-pointer opacity-0;
+    }
+
+    .dropzone-placeholder {
+        @apply text-center text-muted-foreground;
+    }
+
+    .dropzone-preview-list {
+        @apply relative z-2 flex flex-col gap-1 empty:hidden;
+    }
+
+    .dropzone-preview-list-item {
+        @apply flex items-center gap-2 rounded-md bg-background px-3 py-1.5 shadow-xs;
+    }
+
+    .dropzone-preview-filename {
+        @apply min-w-0 grow truncate;
+    }
+
+    .dropzone-preview-list-remove {
+        @apply inline-flex size-6 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground;
+    }
+
+    .dropzone-preview-list-remove::before {
+        content: "×";
+    }
+}

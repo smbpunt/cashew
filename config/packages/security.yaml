@@ -23,6 +23,8 @@ security:
                 login_path: app_login
                 check_path: app_login
                 enable_csrf: true
+                # Where users upload their statements, the history at first, then each month's
+                default_target_path: app_statement_import
             # Blocks a login + IP pair after max_attempts failures per interval, and an IP alone after 5 x max_attempts
             login_throttling:
                 max_attempts: 5

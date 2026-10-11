@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Import statements{% endblock %}
+
+{% block body %}
+<main class="flex min-h-svh justify-center px-4 py-16">
+    <twig:Card class="w-full max-w-2xl self-start">
+        <twig:Card:Header>
+            <twig:Card:Title><h1>Import statements</h1></twig:Card:Title>
+            <twig:Card:Description>Your bank exports, imported in the background.</twig:Card:Description>
+        </twig:Card:Header>
+
+        <twig:Card:Content>
+            <twig:StatementUpload />
+        </twig:Card:Content>
+    </twig:Card>
+</main>
+{% endblock %}

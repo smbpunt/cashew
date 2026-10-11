@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\StatementImport;
+use App\Entity\User;
+use App\Enum\ImportStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,5 +16,44 @@ class StatementImportRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, StatementImport::class);
+    }
+
+    /**
+     * Whether the file is already imported, or being imported: a failed import doesn't count, so that it can be retried.
+     */
+    public function hasActiveImport(User $owner, string $checksum): bool
+    {
+        return null !== $this->createQueryBuilder('i')
+            ->select('i.id')
+            ->where('i.owner = :owner')
+            ->andWhere('i.checksum = :checksum')
+            ->andWhere('i.status != :failed')
+            ->setParameter('owner', $owner)
+            ->setParameter('checksum', $checksum)
+            ->setParameter('failed', ImportStatus::Failed)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<StatementImport> most recent first
+     */
+    public function findOwned(User $owner, array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('i')
+            ->where('i.owner = :owner')
+            ->andWhere('i.id IN (:ids)')
+            ->setParameter('owner', $owner)
+            ->setParameter('ids', $ids)
+            ->orderBy('i.id', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 }

@@ -21,3 +21,10 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    services:
+        # The HTTP client of the Mercure hub (see mercure.yaml): no bundle option or attribute can declare it
+        mercure.test_http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            public: true

@@ -12,3 +12,10 @@ mercure:
                     iss: '%env(MERCURE_JWT_ISSUER)%'
                     sub: 'app'
                     client_id: 'app'
+
+when@test:
+    mercure:
+        hubs:
+            default:
+                # Never reach a hub from the tests: they check this client's requests instead
+                http_client: mercure.test_http_client

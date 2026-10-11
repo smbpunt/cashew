@@ -30,10 +30,16 @@ class StatementImport
     private int $importedCount = 0;
 
     /**
-     * Transactions already known (from an overlapping statement) or after the cutoff date.
+     * Transactions already known, from an overlapping statement.
      */
     #[ORM\Column]
     private int $skippedCount = 0;
+
+    /**
+     * Transactions after the cutoff date: the statement of their month will import them.
+     */
+    #[ORM\Column]
+    private int $afterCutoffCount = 0;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $error = null;
@@ -112,6 +118,11 @@ class StatementImport
         return $this->skippedCount;
     }
 
+    public function getAfterCutoffCount(): int
+    {
+        return $this->afterCutoffCount;
+    }
+
     public function getError(): ?string
     {
         return $this->error;
@@ -127,12 +138,13 @@ class StatementImport
         $this->status = ImportStatus::Processing;
     }
 
-    public function complete(Bank $bank, int $importedCount, int $skippedCount, \DateTimeImmutable $finishedAt): void
+    public function complete(Bank $bank, int $importedCount, int $skippedCount, int $afterCutoffCount, \DateTimeImmutable $finishedAt): void
     {
         $this->status = ImportStatus::Done;
         $this->bank = $bank;
         $this->importedCount = $importedCount;
         $this->skippedCount = $skippedCount;
+        $this->afterCutoffCount = $afterCutoffCount;
         $this->finishedAt = $finishedAt;
     }
 

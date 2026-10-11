@@ -42,7 +42,7 @@ final class SecurityControllerTest extends WebTestCase
         $this->client->request('GET', '/login');
         $this->client->submitForm('Sign in', ['_username' => 'ALICE', '_password' => self::PASSWORD]);
 
-        self::assertResponseRedirects('/');
+        self::assertResponseRedirects('/statements/import');
 
         $this->client->request('GET', '/login');
         self::assertSelectorTextContains('[data-slot="alert"]', 'You are logged in as alice');
@@ -120,6 +120,6 @@ final class SecurityControllerTest extends WebTestCase
     {
         $this->client->request('GET', '/login');
         $this->client->submitForm('Sign in', ['_username' => 'alice', '_password' => self::PASSWORD]);
-        self::assertResponseRedirects('/');
+        self::assertResponseRedirects('/statements/import');
     }
 }
