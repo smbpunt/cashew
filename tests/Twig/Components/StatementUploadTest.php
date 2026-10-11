@@ -8,6 +8,7 @@ use App\Message\ImportStatement;
 use App\MessageHandler\ImportStatementHandler;
 use App\Twig\Components\StatementUpload;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -23,11 +24,12 @@ final class StatementUploadTest extends WebTestCase
 
     private const string FIXTURES = __DIR__.'/../../Fixtures/Statement/';
 
+    private KernelBrowser $client;
     private User $user;
 
     protected function setUp(): void
     {
-        self::createClient();
+        $this->client = self::createClient();
         self::mockTime('2026-10-11');
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -43,7 +45,7 @@ final class StatementUploadTest extends WebTestCase
         $rendered = (string) $this->component()->render();
 
         self::assertStringContainsString('full history', $rendered);
-        self::assertStringContainsString('September 30th, 2026', $rendered);
+        self::assertStringContainsString('September 30, 2026', $rendered);
         self::assertStringContainsString('dropzone-container', $rendered);
     }
 
@@ -112,6 +114,25 @@ final class StatementUploadTest extends WebTestCase
         self::assertStringContainsString('Pick at least one file.', (string) $rendered);
     }
 
+    public function testSpeaksTheLanguageOfTheUser(): void
+    {
+        $this->client->request('GET', '/locale/fr');
+
+        self::assertStringContainsString('30 septembre 2026', (string) $this->component()->render());
+
+        $component = $this->upload($this->component(), $this->file('credit_agricole.csv'), $this->file(contents: "Date,Amount\n2026-09-01,12.00\n"));
+        $this->handleQueuedMessages(2);
+        $rendered = (string) $component->call('refresh')->render();
+        self::assertStringContainsString('7 importées', $rendered);
+        self::assertStringContainsString('Ce fichier n’est pas un export de relevé d’une banque prise en charge.', $rendered);
+
+        $rendered = (string) $this->upload($component, $this->file('credit_agricole.csv'))->render();
+        self::assertStringContainsString('« credit_agricole.csv » est déjà importé.', $rendered);
+
+        $rendered = (string) $this->component()->call('upload')->render();
+        self::assertStringContainsString('Choisissez au moins un fichier.', $rendered);
+    }
+
     public function testRequiresALoggedInUser(): void
     {
         $this->expectException(AccessDeniedException::class);
@@ -121,7 +142,8 @@ final class StatementUploadTest extends WebTestCase
 
     private function component(): TestLiveComponent
     {
-        return $this->createLiveComponent(StatementUpload::class)->actingAs($this->user);
+        // The same browser for every component, with its session
+        return $this->createLiveComponent(StatementUpload::class, client: $this->client)->actingAs($this->user);
     }
 
     private function upload(TestLiveComponent $component, UploadedFile ...$files): TestLiveComponent

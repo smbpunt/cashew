@@ -7,6 +7,7 @@ use App\Enum\ImportStatus;
 use App\Repository\StatementImportRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Translation\TranslatableMessage;
 
 /**
  * One uploaded statement file, and how its asynchronous import went.
@@ -41,8 +42,19 @@ class StatementImport
     #[ORM\Column]
     private int $afterCutoffCount = 0;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $error = null;
+    /**
+     * Why the import failed, as a translation key.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $errorKey = null;
+
+    /**
+     * The parameters of the error's translation.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: Types::JSON)]
+    private array $errorData = [];
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $finishedAt = null;
@@ -123,9 +135,9 @@ class StatementImport
         return $this->afterCutoffCount;
     }
 
-    public function getError(): ?string
+    public function getError(): ?TranslatableMessage
     {
-        return $this->error;
+        return null === $this->errorKey ? null : new TranslatableMessage($this->errorKey, $this->errorData);
     }
 
     public function getFinishedAt(): ?\DateTimeImmutable
@@ -148,10 +160,14 @@ class StatementImport
         $this->finishedAt = $finishedAt;
     }
 
-    public function fail(string $error, \DateTimeImmutable $finishedAt): void
+    /**
+     * @param array<string, string> $errorData
+     */
+    public function fail(string $errorKey, array $errorData, \DateTimeImmutable $finishedAt): void
     {
         $this->status = ImportStatus::Failed;
-        $this->error = $error;
+        $this->errorKey = $errorKey;
+        $this->errorData = $errorData;
         $this->finishedAt = $finishedAt;
     }
 

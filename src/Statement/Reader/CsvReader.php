@@ -15,7 +15,7 @@ final class CsvReader
     {
         $handle = @fopen($file->getPathname(), 'r');
         if (false === $handle) {
-            throw new UnreadableStatementException('The statement file can\'t be opened.');
+            throw new UnreadableStatementException('statement.error.cannot_open');
         }
 
         try {

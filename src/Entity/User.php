@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_LOGIN', fields: ['login'])]
-#[UniqueEntity(fields: ['login'], message: 'This login is already taken.')]
+#[UniqueEntity(fields: ['login'], message: 'user.login.taken')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -27,7 +27,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\NotBlank]
     #[Assert\Length(min: 3, max: 180)]
     // ASCII only: rules out look-alike, invisible and combining Unicode characters
-    #[Assert\Regex('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/', message: 'Use only letters, digits, and . _ - between them.')]
+    #[Assert\Regex('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/', message: 'user.login.characters')]
     private ?string $login = null;
 
     /**

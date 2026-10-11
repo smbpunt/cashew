@@ -38,6 +38,6 @@ final readonly class StatementParserResolver
             throw new \LogicException(\sprintf('Several parsers support the same statement: "%s".', implode('", "', array_map(get_debug_type(...), $supporting))));
         }
 
-        return $supporting[0] ?? throw new UnreadableStatementException('This file isn\'t a statement export from a supported bank.');
+        return $supporting[0] ?? throw new UnreadableStatementException('statement.error.unsupported_bank');
     }
 }

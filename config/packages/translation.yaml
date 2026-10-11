@@ -1,5 +1,8 @@
 framework:
     default_locale: en
+    # The languages of the interface: see App\EventSubscriber\LocaleSubscriber for how one is picked
+    enabled_locales: [en, fr]
     translator:
         default_path: '%kernel.project_dir%/translations'
+        fallbacks: [en]
         providers:

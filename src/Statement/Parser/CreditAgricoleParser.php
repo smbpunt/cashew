@@ -72,7 +72,7 @@ final readonly class CreditAgricoleParser implements StatementParser
             }
 
             if (null === $account) {
-                throw new UnreadableStatementException('The statement lists transactions before naming their account.');
+                throw new UnreadableStatementException('statement.error.transactions_before_account');
             }
 
             $date = $this->dates->parse($first);

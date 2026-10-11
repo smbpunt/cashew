@@ -34,7 +34,7 @@ final readonly class StatementUploader
         $checksum = hash_file('sha256', $file->getPathname()) ?: throw new \RuntimeException('The uploaded file can\'t be read.');
 
         if ($this->imports->hasActiveImport($owner, $checksum)) {
-            throw new DuplicateStatementException(\sprintf('"%s" is already imported.', $file->getClientOriginalName()));
+            throw new DuplicateStatementException('statement.error.already_imported', ['filename' => $file->getClientOriginalName()]);
         }
 
         $import = new StatementImport($owner, $file->getClientOriginalName(), $this->storage->store($file), $checksum, $this->clock->now());

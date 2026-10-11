@@ -36,18 +36,18 @@ final class FrenchDateParser
         }
 
         if (preg_match('/^(?<day>\d{1,2})(?:er)?\s+(?<month>\p{L}+)\.?\s+(?<year>\d{4})$/u', $value, $matches)) {
-            $month = self::MONTHS[mb_strtolower($matches['month'])] ?? throw new UnreadableStatementException(\sprintf('"%s" isn\'t a date.', $value));
+            $month = self::MONTHS[mb_strtolower($matches['month'])] ?? throw new UnreadableStatementException('statement.error.not_a_date', ['value' => $value]);
 
             return $this->date((int) $matches['year'], $month, (int) $matches['day'], $value);
         }
 
-        throw new UnreadableStatementException(\sprintf('"%s" isn\'t a date.', $value));
+        throw new UnreadableStatementException('statement.error.not_a_date', ['value' => $value]);
     }
 
     private function date(int $year, int $month, int $day, string $value): \DateTimeImmutable
     {
         if (!checkdate($month, $day, $year)) {
-            throw new UnreadableStatementException(\sprintf('"%s" isn\'t a date.', $value));
+            throw new UnreadableStatementException('statement.error.not_a_date', ['value' => $value]);
         }
 
         return new \DateTimeImmutable()->setDate($year, $month, $day)->setTime(0, 0);

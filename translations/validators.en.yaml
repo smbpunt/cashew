@@ -1,0 +1,10 @@
+statement:
+    upload:
+        min_files: Pick at least one file.
+        max_files: 'Upload at most {{ limit }} files at once.'
+        not_csv: Only CSV exports are supported.
+
+user:
+    login:
+        taken: This login is already taken.
+        characters: Use only letters, digits, and . _ - between them.

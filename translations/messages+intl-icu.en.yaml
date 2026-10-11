@@ -1,0 +1,44 @@
+# ICU MessageFormat: https://symfony.com/doc/current/reference/formats/message_format.html
+locale:
+    switcher: Language
+
+security:
+    log_out: log out
+    login:
+        title: Sign in
+        description: Enter your login and password.
+        logged_in_as: 'You are logged in as {login},'
+        login: Login
+        password: Password
+        submit: Sign in
+
+statement:
+    import:
+        title: Import statements
+        description: Your bank exports, imported in the background.
+        status:
+            pending: Waiting…
+            processing: Importing…
+            failed: Failed
+        result: >-
+            {imported} imported{skipped, plural, =0 {} other {, # already known}}{after_cutoff, plural, =0 {} other {, # left for next month}}
+    upload:
+        intro:
+            first: Export the <strong>full history</strong> of each of your accounts, from every bank, and drop the files below.
+            monthly: 'Once a month is over, export its statement and drop it below. Exports may overlap: transactions already imported are skipped.'
+            supported: 'Supported: Crédit Agricole (CSV export) and Revolut (statement in French, CSV). Transactions are imported up to the end of the last whole month, {cutoff}.'
+        placeholder: Drop your CSV exports here, or click to pick them
+        submit: Import
+        uploading: Uploading…
+        imports: Imports
+    error:
+        already_imported: '"{filename}" is already imported.'
+        cannot_open: The statement file can't be opened.
+        unsupported_bank: This file isn't a statement export from a supported bank.
+        not_an_amount: '"{value}" isn''t an amount.'
+        unknown_currency: 'Unknown currency in "{value}".'
+        not_a_date: '"{value}" isn''t a date.'
+        foreign_currency_amount: 'An amount of the "{account}" account is in {currency}.'
+        missing_column: 'The transactions have no "{column}" column.'
+        transactions_before_account: The statement lists transactions before naming their account.
+        unexpected: Something went wrong while importing this file.

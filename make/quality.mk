@@ -15,6 +15,8 @@ lint-symfony: ## Linters Symfony (YAML, Twig, Container, Translations)
 	$(SYMFONY) lint:container --env=prod
 	$(SYMFONY) lint:yaml translations
 	$(SYMFONY) lint:translations
+	$(SYMFONY) debug:translation en --only-missing
+	$(SYMFONY) debug:translation fr --only-missing
 
 doctrine-validate: ## Validate Doctrine schema mappings
 	@echo "Validating Doctrine schema…"

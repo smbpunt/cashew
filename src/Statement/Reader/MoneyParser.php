@@ -33,7 +33,7 @@ final class MoneyParser
         $normalized = trim(str_replace(["\u{00A0}", "\u{202F}"], ' ', $value));
 
         if (!preg_match(self::PATTERN, $normalized, $matches) || ('' !== $matches['before'] && '' !== $matches['after'])) {
-            throw new UnreadableStatementException(\sprintf('"%s" isn\'t an amount.', $value));
+            throw new UnreadableStatementException('statement.error.not_an_amount', ['value' => $value]);
         }
 
         $negative = \in_array($matches['sign'], ['-', "\u{2212}"], true) || \in_array($matches['sign2'], ['-', "\u{2212}"], true);
@@ -56,7 +56,7 @@ final class MoneyParser
         }
 
         if (!preg_match('/^\d{1,3}(?:[ ,.]?\d{3})*$/', $integer)) {
-            throw new UnreadableStatementException(\sprintf('"%s" isn\'t an amount.', $value));
+            throw new UnreadableStatementException('statement.error.not_an_amount', ['value' => $value]);
         }
 
         return (int) (str_replace([' ', ',', '.'], '', $integer).$decimals);
@@ -68,6 +68,6 @@ final class MoneyParser
             return $symbol;
         }
 
-        return self::CURRENCY_SYMBOLS[$symbol] ?? throw new UnreadableStatementException(\sprintf('Unknown currency in "%s".', $value));
+        return self::CURRENCY_SYMBOLS[$symbol] ?? throw new UnreadableStatementException('statement.error.unknown_currency', ['value' => $value]);
     }
 }

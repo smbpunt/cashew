@@ -1,0 +1,44 @@
+# ICU MessageFormat: https://symfony.com/doc/current/reference/formats/message_format.html
+locale:
+    switcher: Langue
+
+security:
+    log_out: se déconnecter
+    login:
+        title: Connexion
+        description: Saisissez votre identifiant et votre mot de passe.
+        logged_in_as: 'Session ouverte en tant que {login},'
+        login: Identifiant
+        password: Mot de passe
+        submit: Se connecter
+
+statement:
+    import:
+        title: Importer des relevés
+        description: Les exports de vos banques, importés en arrière-plan.
+        status:
+            pending: En attente…
+            processing: Import en cours…
+            failed: Échec
+        result: >-
+            {imported, plural, one {# importée} other {# importées}}{skipped, plural, =0 {} one {, # déjà connue} other {, # déjà connues}}{after_cutoff, plural, =0 {} other {, # pour le mois prochain}}
+    upload:
+        intro:
+            first: Exportez <strong>tout l’historique</strong> de chacun de vos comptes, dans chaque banque, et déposez les fichiers ci-dessous.
+            monthly: 'Une fois le mois terminé, exportez son relevé et déposez-le ci-dessous. Les exports peuvent se chevaucher : les transactions déjà importées sont ignorées.'
+            supported: 'Pris en charge : Crédit Agricole (export CSV) et Revolut (relevé en français, CSV). Les transactions sont importées jusqu’à la fin du dernier mois complet, le {cutoff}.'
+        placeholder: Déposez vos exports CSV ici, ou cliquez pour les choisir
+        submit: Importer
+        uploading: Envoi…
+        imports: Imports
+    error:
+        already_imported: '« {filename} » est déjà importé.'
+        cannot_open: Le fichier du relevé ne peut pas être ouvert.
+        unsupported_bank: Ce fichier n’est pas un export de relevé d’une banque prise en charge.
+        not_an_amount: '« {value} » n’est pas un montant.'
+        unknown_currency: 'Devise inconnue dans « {value} ».'
+        not_a_date: '« {value} » n’est pas une date.'
+        foreign_currency_amount: 'Un montant du compte « {account} » est en {currency}.'
+        missing_column: 'Les transactions n’ont pas de colonne « {column} ».'
+        transactions_before_account: Le relevé liste des transactions avant de nommer leur compte.
+        unexpected: Une erreur est survenue pendant l’import de ce fichier.

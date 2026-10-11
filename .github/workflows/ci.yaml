@@ -103,6 +103,11 @@ jobs:
         run: php bin/console lint:yaml config translations --parse-tags
       - name: Lint translations
         run: php bin/console lint:translations
+      # Fails on a key used in a template or form but missing from a catalog (keys built at runtime aren't seen)
+      - name: Check missing translations
+        run: |
+          php bin/console debug:translation en --only-missing
+          php bin/console debug:translation fr --only-missing
       - name: Build Tailwind CSS
         run: php bin/console tailwind:build --minify --env=prod
       - name: Compile assets

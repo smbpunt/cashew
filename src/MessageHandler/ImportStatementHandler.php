@@ -81,10 +81,10 @@ final readonly class ImportStatementHandler
                 $import = $this->reload($id) ?? throw $exception;
 
                 if ($exception instanceof UnreadableStatementException) {
-                    $import->fail($exception->getMessage(), $this->clock->now());
+                    $import->fail($exception->getMessageKey(), $exception->getMessageData(), $this->clock->now());
                 } else {
                     $this->logger->error('Statement import #{id} failed: {message}', ['id' => $id, 'message' => $exception->getMessage(), 'exception' => $exception]);
-                    $import->fail('Something went wrong while importing this file.', $this->clock->now());
+                    $import->fail('statement.error.unexpected', [], $this->clock->now());
                 }
             }
         } finally {

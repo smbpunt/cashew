@@ -26,6 +26,9 @@
         {% endif %}
     </head>
     <body>
+        {% block locale_switcher %}
+            <twig:LocaleSwitcher class="fixed top-3 right-4 z-50" />
+        {% endblock %}
         {% block body %}{% endblock %}
     </body>
 </html>

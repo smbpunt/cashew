@@ -149,7 +149,7 @@ final class ImportStatementHandlerTest extends KernelTestCase
         $import = $this->uploadAndImport(contents: "Date,Amount\n2026-09-01,12.00\n");
 
         self::assertSame(ImportStatus::Failed, $import->getStatus());
-        self::assertSame('This file isn\'t a statement export from a supported bank.', $import->getError());
+        self::assertSame('statement.error.unsupported_bank', $import->getError()?->getMessage());
         self::assertNull($import->getStoredPath());
         self::assertSame(0, $this->entityManager->getRepository(Transaction::class)->count([]));
 

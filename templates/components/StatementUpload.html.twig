@@ -9,19 +9,10 @@
         ></div>
     {% endif %}
 
-    <div class="flex flex-col gap-1">
-        {% if this.firstImport %}
-            <p class="text-sm text-muted-foreground">
-                Export the <strong class="font-medium text-foreground">full history</strong> of each of your accounts, from every bank, and drop the files below.
-            </p>
-        {% else %}
-            <p class="text-sm text-muted-foreground">
-                Once a month is over, export its statement and drop it below. Exports may overlap: transactions already imported are skipped.
-            </p>
-        {% endif %}
-        <p class="text-sm text-muted-foreground">
-            Supported: Crédit Agricole (CSV export) and Revolut (statement in French, CSV). Transactions are imported up to the end of the last whole month, {{ this.cutoffDate|date('F jS, Y') }}.
-        </p>
+    <div class="flex flex-col gap-1 text-sm text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground">
+        {# Our own catalogs, without user data: their markup is safe #}
+        <p>{{ (this.firstImport ? 'statement.upload.intro.first' : 'statement.upload.intro.monthly')|trans|raw }}</p>
+        <p>{{ 'statement.upload.intro.supported'|trans({cutoff: this.cutoffDate|format_date('long')}) }}</p>
     </div>
 
     {{ form_start(this.form, {attr: {
@@ -52,31 +43,29 @@
         {% endif %}
 
         <twig:Button type="submit" class="self-start" data-loading="addAttribute(disabled)">
-            <span data-loading="hide">Import</span>
-            <span data-loading="show" hidden>Uploading…</span>
+            <span data-loading="hide">{{ 'statement.upload.submit'|trans }}</span>
+            <span data-loading="show" hidden>{{ 'statement.upload.uploading'|trans }}</span>
         </twig:Button>
     {{ form_end(this.form, {render_rest: false}) }}
 
     {% if this.imports is not empty %}
-        <ul class="flex flex-col gap-2" aria-live="polite" aria-label="Imports">
+        <ul class="flex flex-col gap-2" aria-live="polite" aria-label="{{ 'statement.upload.imports'|trans }}">
             {% for import in this.imports %}
                 <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border px-4 py-3 text-sm" data-import-status="{{ import.status.value }}">
                     <span class="min-w-0 truncate font-medium">{{ import.originalFilename }}</span>
                     {% if import.status.value == 'pending' %}
-                        <twig:Badge variant="secondary">Waiting…</twig:Badge>
+                        <twig:Badge variant="secondary">{{ 'statement.import.status.pending'|trans }}</twig:Badge>
                     {% elseif import.status.value == 'processing' %}
-                        <twig:Badge variant="secondary">Importing…</twig:Badge>
+                        <twig:Badge variant="secondary">{{ 'statement.import.status.processing'|trans }}</twig:Badge>
                     {% elseif import.status.value == 'done' %}
                         <span class="flex flex-wrap items-center gap-2 text-muted-foreground">
                             <twig:Badge>{{ import.bank.label }}</twig:Badge>
-                            {{ import.importedCount }} imported
-                            {%- if import.skippedCount %}, {{ import.skippedCount }} already known{% endif %}
-                            {%- if import.afterCutoffCount %}, {{ import.afterCutoffCount }} left for next month{% endif %}
+                            {{ 'statement.import.result'|trans({imported: import.importedCount, skipped: import.skippedCount, after_cutoff: import.afterCutoffCount}) }}
                         </span>
                     {% else %}
                         <span class="flex flex-wrap items-center gap-2">
-                            <twig:Badge variant="destructive">Failed</twig:Badge>
-                            <span class="text-destructive">{{ import.error }}</span>
+                            <twig:Badge variant="destructive">{{ 'statement.import.status.failed'|trans }}</twig:Badge>
+                            <span class="text-destructive">{{ import.error|trans }}</span>
                         </span>
                     {% endif %}
                 </li>

@@ -18,6 +18,7 @@ use Symfony\Component\Form\FormView;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
@@ -80,6 +81,7 @@ final class StatementUpload
         private readonly TransactionRepository $transactions,
         private readonly CutoffPolicy $cutoff,
         private readonly Security $security,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -101,7 +103,7 @@ final class StatementUpload
             try {
                 array_unshift($this->importIds, (int) $this->uploader->upload($this->user(), $file)->getId());
             } catch (DuplicateStatementException $exception) {
-                $this->uploadErrors[] = $exception->getMessage();
+                $this->uploadErrors[] = $exception->trans($this->translator);
             }
         }
 

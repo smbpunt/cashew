@@ -1,20 +1,20 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Sign in{% endblock %}
+{% block title %}{{ 'security.login.title'|trans }}{% endblock %}
 
 {% block body %}
 <main class="flex min-h-svh items-center justify-center px-4 py-16">
     <twig:Card class="w-full max-w-sm">
         <twig:Card:Header>
-            <twig:Card:Title><h1>Sign in</h1></twig:Card:Title>
-            <twig:Card:Description>Enter your login and password.</twig:Card:Description>
+            <twig:Card:Title><h1>{{ 'security.login.title'|trans }}</h1></twig:Card:Title>
+            <twig:Card:Description>{{ 'security.login.description'|trans }}</twig:Card:Description>
         </twig:Card:Header>
 
         <twig:Card:Content>
             {% if app.user %}
                 <twig:Alert class="mb-4">
                     <twig:Alert:Description>
-                        You are logged in as {{ app.user.userIdentifier }}, <a href="{{ logout_path() }}" class="underline underline-offset-4">log out</a>.
+                        {{ 'security.login.logged_in_as'|trans({login: app.user.userIdentifier}) }} <a href="{{ logout_path() }}" class="underline underline-offset-4">{{ 'security.log_out'|trans }}</a>
                     </twig:Alert:Description>
                 </twig:Alert>
             {% endif %}
@@ -27,18 +27,18 @@
 
             <form method="post" action="{{ path('app_login') }}" class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2">
-                    <twig:Label for="username">Login</twig:Label>
+                    <twig:Label for="username">{{ 'security.login.login'|trans }}</twig:Label>
                     <twig:Input type="text" name="_username" id="username" value="{{ last_username }}" autocomplete="username" autocapitalize="none" required autofocus />
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <twig:Label for="password">Password</twig:Label>
+                    <twig:Label for="password">{{ 'security.login.password'|trans }}</twig:Label>
                     <twig:Input type="password" name="_password" id="password" autocomplete="current-password" required />
                 </div>
 
                 <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
 
-                <twig:Button type="submit" size="lg" class="w-full">Sign in</twig:Button>
+                <twig:Button type="submit" size="lg" class="w-full">{{ 'security.login.submit'|trans }}</twig:Button>
             </form>
         </twig:Card:Content>
     </twig:Card>

@@ -20,14 +20,14 @@ final class StatementUploadType extends AbstractType
             'label' => false,
             'multiple' => true,
             'attr' => [
-                'placeholder' => 'Drop your CSV exports here, or click to pick them',
+                'placeholder' => 'statement.upload.placeholder',
                 'accept' => '.csv,text/csv',
             ],
             'constraints' => [
-                new Assert\Count(min: 1, max: 10, minMessage: 'Pick at least one file.', maxMessage: 'Upload at most {{ limit }} files at once.'),
+                new Assert\Count(min: 1, max: 10, minMessage: 'statement.upload.min_files', maxMessage: 'statement.upload.max_files'),
                 new Assert\All([
                     // Banks export CSV as text/csv or text/plain, depending on their encoding
-                    new Assert\File(maxSize: '5M', extensions: ['csv' => ['text/csv', 'text/plain', 'application/csv']], extensionsMessage: 'Only CSV exports are supported.'),
+                    new Assert\File(maxSize: '5M', extensions: ['csv' => ['text/csv', 'text/plain', 'application/csv']], extensionsMessage: 'statement.upload.not_csv'),
                 ]),
             ],
         ]);

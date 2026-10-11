@@ -81,7 +81,7 @@ final readonly class RevolutParser implements StatementParser
 
             $money = $this->money->parse($record[$columns['amount']] ?? '');
             if (null !== $money->currency && $money->currency !== $account->currency) {
-                throw new UnreadableStatementException(\sprintf('An amount of the "%s" account is in %s.', $account->externalId, $money->currency));
+                throw new UnreadableStatementException('statement.error.foreign_currency_amount', ['account' => $account->externalId, 'currency' => $money->currency]);
             }
 
             $category = trim($record[$columns['category']] ?? '');
@@ -116,7 +116,7 @@ final readonly class RevolutParser implements StatementParser
     {
         $index = static fn (string $name): int => false !== ($position = array_search($name, $header, true))
             ? $position
-            : throw new UnreadableStatementException(\sprintf('The transactions have no "%s" column.', $name));
+            : throw new UnreadableStatementException('statement.error.missing_column', ['column' => $name]);
 
         return [
             'description' => $index('Description'),

@@ -1,0 +1,10 @@
+statement:
+    upload:
+        min_files: Choisissez au moins un fichier.
+        max_files: 'Envoyez au plus {{ limit }} fichiers à la fois.'
+        not_csv: Seuls les exports CSV sont pris en charge.
+
+user:
+    login:
+        taken: Cet identifiant est déjà pris.
+        characters: N’utilisez que des lettres, des chiffres, et . _ - entre eux.
