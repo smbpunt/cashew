@@ -86,6 +86,39 @@ final class ImportStatementHandlerTest extends KernelTestCase
         self::assertSame(7, $this->entityManager->getRepository(Transaction::class)->count([]));
     }
 
+    public function testASettlementImportedWithoutItsCardStatementIsMarkedOnceTheCardStatementComes(): void
+    {
+        self::mockTime('2026-10-11');
+        $full = (string) file_get_contents(self::FIXTURES.'credit_agricole.csv');
+        // The account's transactions only: the card statement debited on September 30th is missing
+        $this->uploadAndImport(contents: strstr($full, 'MONSIEUR JEAN DUPONT - Titulaire', true) ?: throw new \LogicException('The fixture changed.'));
+        self::assertSame([TransactionKind::Regular->value => 5], $this->countKinds());
+
+        $import = $this->uploadAndImport(contents: $full);
+
+        self::assertSame([2, 5], [$import->getImportedCount(), $import->getSkippedCount()]);
+        self::assertSame([
+            TransactionKind::DeferredCardSettlement->value => 1,
+            TransactionKind::Regular->value => 4,
+            TransactionKind::DeferredCardPurchase->value => 2,
+        ], $this->countKinds());
+    }
+
+    public function testResumesAnImportWhoseRunDied(): void
+    {
+        self::mockTime('2026-10-11');
+        $import = $this->upload('credit_agricole.csv');
+        // The worker died once the import started
+        $import->start();
+        $this->entityManager->flush();
+
+        $this->handleQueuedMessages();
+
+        $import = $this->reload($import);
+        self::assertSame(ImportStatus::Done, $import->getStatus());
+        self::assertSame(7, $import->getImportedCount());
+    }
+
     public function testImportsEveryAccountOfAStatement(): void
     {
         self::mockTime('2026-10-11');

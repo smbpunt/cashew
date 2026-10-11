@@ -5,6 +5,7 @@ namespace App\Statement\Import;
 use App\Entity\BankAccount;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
+use App\Enum\TransactionKind;
 use App\Repository\TransactionRepository;
 use App\Statement\Exception\UnreadableStatementException;
 use App\Statement\Parser\StatementParserResolver;
@@ -62,6 +63,12 @@ final readonly class StatementImporter
             $known[$externalId] ??= $this->knownFingerprints($account);
 
             if (isset($known[$externalId][$fingerprint])) {
+                // The kind isn't part of the fingerprint: a settlement may have been imported as a regular debit,
+                // from a statement without its card statement
+                if (TransactionKind::DeferredCardSettlement === $parsed->kind) {
+                    $this->transactions->findOneBy(['account' => $account, 'fingerprint' => $fingerprint])?->markAsDeferredCardSettlement();
+                }
+
                 ++$skipped;
                 continue;
             }

@@ -21,18 +21,13 @@ final class CsvReader
         try {
             if ('UTF-8' !== $encoding) {
                 stream_filter_append($handle, \sprintf('convert.iconv.%s/UTF-8', $encoding), \STREAM_FILTER_READ);
+            } elseif ("\u{FEFF}" !== fread($handle, 3)) {
+                // Skipped before parsing, or a quoted first cell would keep its quotes
+                rewind($handle);
             }
 
-            $isFirst = true;
             while (false !== $record = fgetcsv($handle, null, $separator, '"', '')) {
-                $record = array_map(static fn (?string $cell): string => $cell ?? '', $record);
-
-                if ($isFirst && str_starts_with($record[0], "\u{FEFF}")) {
-                    $record[0] = substr($record[0], 3);
-                }
-                $isFirst = false;
-
-                yield $record;
+                yield array_map(static fn (?string $cell): string => $cell ?? '', $record);
             }
         } finally {
             fclose($handle);

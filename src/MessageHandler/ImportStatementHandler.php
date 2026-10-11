@@ -3,7 +3,6 @@
 namespace App\MessageHandler;
 
 use App\Entity\StatementImport;
-use App\Enum\ImportStatus;
 use App\Message\ImportStatement;
 use App\Repository\StatementImportRepository;
 use App\Statement\Exception\UnreadableStatementException;
@@ -40,7 +39,7 @@ final readonly class ImportStatementHandler
         $import = $this->imports->find($message->statementImportId);
 
         // Deleted since, or a redelivered message
-        if (null === $import || ImportStatus::Pending !== $import->getStatus()) {
+        if (null === $import || $import->getStatus()->isFinished()) {
             return;
         }
 
@@ -49,6 +48,14 @@ final readonly class ImportStatementHandler
         $lock->acquire(true);
 
         try {
+            // Another delivery of the message may have run the import while this one waited for the lock
+            $this->entityManager()->refresh($import);
+            if ($import->getStatus()->isFinished()) {
+                return;
+            }
+
+            // Pending, or still processing after a run that died: the transactions are flushed with the
+            // outcome, all at once, so that run left none behind
             $import->start();
             $this->entityManager()->flush();
             $this->notifier->notify($import);
@@ -66,25 +73,29 @@ final readonly class ImportStatementHandler
         $path = $import->getStoredPath();
 
         try {
-            $result = $this->importer->import($import);
-            $import->complete($result->bank, $result->importedCount, $result->skippedCount, $result->afterCutoffCount, $this->clock->now());
-            $this->entityManager()->flush();
-        } catch (\Throwable $exception) {
-            $import = $this->reload($id) ?? throw $exception;
+            try {
+                $result = $this->importer->import($import);
+                $import->complete($result->bank, $result->importedCount, $result->skippedCount, $result->afterCutoffCount, $this->clock->now());
+                $this->entityManager()->flush();
+            } catch (\Throwable $exception) {
+                $import = $this->reload($id) ?? throw $exception;
 
-            if ($exception instanceof UnreadableStatementException) {
-                $import->fail($exception->getMessage(), $this->clock->now());
-            } else {
-                $this->logger->error('Statement import #{id} failed: {message}', ['id' => $id, 'message' => $exception->getMessage(), 'exception' => $exception]);
-                $import->fail('Something went wrong while importing this file.', $this->clock->now());
+                if ($exception instanceof UnreadableStatementException) {
+                    $import->fail($exception->getMessage(), $this->clock->now());
+                } else {
+                    $this->logger->error('Statement import #{id} failed: {message}', ['id' => $id, 'message' => $exception->getMessage(), 'exception' => $exception]);
+                    $import->fail('Something went wrong while importing this file.', $this->clock->now());
+                }
+            }
+        } finally {
+            // Bank statements are personal data: keep them no longer than needed, whatever the outcome,
+            // even when the import itself is gone
+            if (null !== $path) {
+                $this->storage->delete($path);
             }
         }
 
-        // Bank statements are personal data: keep them no longer than needed, whatever the outcome
-        if (null !== $path) {
-            $this->storage->delete($path);
-            $import->forgetStoredFile();
-        }
+        $import->forgetStoredFile();
         $this->entityManager()->flush();
 
         return $import;

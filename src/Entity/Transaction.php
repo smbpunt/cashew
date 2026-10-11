@@ -97,6 +97,15 @@ class Transaction
         return $this->kind;
     }
 
+    /**
+     * A debit imported as regular, from a statement that lacked the card statement it settles: now that its purchases
+     * are imported one by one, it must leave the spending totals.
+     */
+    public function markAsDeferredCardSettlement(): void
+    {
+        $this->kind = TransactionKind::DeferredCardSettlement;
+    }
+
     public function getBankCategory(): ?string
     {
         return $this->bankCategory;
