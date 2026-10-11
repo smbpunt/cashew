@@ -26,6 +26,28 @@ services:
       # Ensure that host.docker.internal is correctly defined on Linux
       - host.docker.internal:host-gateway
     tty: true
+
+  # Rebuilds the Tailwind CSS whenever a template or asset changes
+  tailwind:
+    # Same image as php, which builds it
+    image: ${IMAGES_PREFIX:-}app-php-dev
+    pull_policy: never
+    # Bypass the app entrypoint (composer install, migrations): the php service already runs it
+    entrypoint: ["docker-php-entrypoint"]
+    command: ["php", "bin/console", "tailwind:build", "--watch"]
+    # php's mounts, including its /app/var volume: the CSS must be built where php serves it from
+    volumes_from:
+      - php
+    environment:
+      APP_ENV: "${APP_ENV:-dev}"
+      XDEBUG_MODE: "off"
+    # The image's healthcheck probes FrankenPHP, which doesn't run here (and would fail "up --wait")
+    healthcheck:
+      disable: true
+    depends_on:
+      php:
+        condition: service_healthy
+    restart: unless-stopped
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 
