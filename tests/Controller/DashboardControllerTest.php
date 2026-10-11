@@ -88,7 +88,7 @@ final class DashboardControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'September 2026');
-        self::assertSame(['Income €2,500.00', 'Spending €97.39', 'Balance +€2,402.61'], $crawler->filter('dl > div')->each(
+        self::assertSame(['Income €2,500.00', 'Spending €97.39', 'Balance +€2,402.61'], $crawler->filter('dl[data-currency] > div')->each(
             static fn ($tile): string => (string) preg_replace('/\s+/u', ' ', trim($tile->text())),
         ));
 
@@ -100,10 +100,61 @@ final class DashboardControllerTest extends WebTestCase
             '10 Sep Cinéma',
             '2 Sep BOULANGERIE DU PORT',
         ], $crawler->filter('[data-transaction]')->each(static fn ($row): string => $row->filter('time')->text().' '.$row->filter('p')->first()->text()));
-        self::assertSelectorTextContains('[data-transaction]:nth-child(4)', 'Revolut · Leisure');
 
         self::assertSelectorExists('a[rel="prev"][href="/dashboard?month=2026-08"]');
         self::assertSelectorExists('button[disabled][aria-label="Next month"]');
+    }
+
+    public function testListsTheTransactionsSimplyByDefault(): void
+    {
+        $this->createTransactions();
+
+        $this->client->request('GET', '/dashboard');
+
+        self::assertSelectorExists('[data-mode="simple"][aria-current="true"]');
+        self::assertSelectorExists('a[data-mode="detailed"][aria-current="false"][href="/dashboard?month=2026-09&mode=detailed"]');
+        self::assertSelectorTextSame('[data-transaction]:nth-child(4)', '10 Sep Cinéma -€15.00');
+    }
+
+    public function testListsTheDetailsOfTheTransactionsAndRemembersIt(): void
+    {
+        $this->createTransactions();
+
+        $crawler = $this->client->request('GET', '/dashboard?month=2026-09&mode=detailed');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('[data-mode="detailed"][aria-current="true"]');
+        self::assertSame(
+            ['Account Personal', 'Bank Revolut', 'Category Leisure'],
+            $crawler->filter('[data-transaction]:nth-child(4) [data-detail]')->each(static fn ($detail): string => $detail->text()),
+        );
+        // The whole label, one line per line of the statement
+        self::assertSame(['Prélèvement', 'FREE MOBILE'], $crawler->filter('[data-transaction]:nth-child(3) p')->each(static fn ($line): string => $line->text()));
+        self::assertSelectorTextContains('[data-transaction]:nth-child(3)', 'Compte de Dépôt');
+        self::assertSelectorTextContains('[data-transaction]:nth-child(3)', 'Crédit Agricole');
+        self::assertSelectorNotExists('[data-transaction]:nth-child(3) [data-detail="category"]');
+        self::assertSelectorTextContains('[data-transaction]:nth-child(2)', 'Deferred debit card');
+
+        $this->client->click($crawler->filter('a[rel="prev"]')->link());
+        self::assertSelectorTextContains('h1', 'August 2026');
+        self::assertSelectorExists('[data-mode="detailed"][aria-current="true"]');
+        self::assertSelectorTextContains('[data-transaction]', 'Compte de Dépôt');
+
+        $this->client->clickLink('Simple');
+        self::assertSelectorExists('[data-mode="simple"][aria-current="true"]');
+        self::assertSelectorNotExists('[data-detail]');
+
+        $this->client->request('GET', '/dashboard');
+        self::assertSelectorExists('[data-mode="simple"][aria-current="true"]');
+    }
+
+    public function testAnUnknownModeIsNotFound(): void
+    {
+        $this->createTransactions();
+
+        $this->client->request('GET', '/dashboard?mode=fancy');
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testShowsAnotherMonth(): void

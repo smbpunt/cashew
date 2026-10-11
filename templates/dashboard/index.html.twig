@@ -46,31 +46,80 @@
             </dl>
         {% endfor %}
 
-        <twig:Card class="gap-0 py-0">
-            <h2 class="sr-only">{{ 'dashboard.transactions'|trans }}</h2>
-            {% if report.transactions is empty %}
-                <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'dashboard.no_transactions'|trans({month: month_name}) }}</p>
-            {% else %}
-                <ul class="divide-y">
-                    {% for transaction in report.transactions %}
-                        {% set label = transaction.label|split("\n") %}
-                        <li class="flex items-center gap-4 px-4 py-3 sm:px-6" data-transaction>
-                            <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
-                                {{- transaction.date|format_date(pattern: 'd MMM') -}}
-                            </time>
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-medium" title="{{ label|join(' · ') }}">{{ label|join(' · ') }}</p>
-                                <p class="truncate text-xs text-muted-foreground">
-                                    {{- transaction.account.label }} · {{ transaction.account.bank.label -}}
-                                    {%- if transaction.bankCategory %} · {{ transaction.bankCategory }}{% endif -%}
-                                </p>
-                            </div>
-                            <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </twig:Card>
+        {# The mode switches within the frame: only the list reloads, and the page keeps its scroll #}
+        <turbo-frame id="transactions">
+            <twig:Card class="gap-0 py-0">
+                <div class="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
+                    <h2 class="font-semibold">{{ 'dashboard.transactions'|trans }}</h2>
+
+                    <div role="group" aria-label="{{ 'dashboard.mode.label'|trans }}" class="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+                        {% for option in enum('App\\Enum\\TransactionListMode').cases() %}
+                            <twig:Button
+                                as="a"
+                                variant="ghost"
+                                size="xs"
+                                href="{{ path('app_dashboard', {month: report.month|date('Y-m'), mode: option.value}) }}"
+                                aria-current="{{ option == mode ? 'true' : 'false' }}"
+                                class="text-muted-foreground hover:bg-background/60 aria-[current=true]:bg-background aria-[current=true]:text-foreground aria-[current=true]:shadow-sm"
+                                data-mode="{{ option.value }}"
+                            >{{ ('dashboard.mode.' ~ option.value)|trans }}</twig:Button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if report.transactions is empty %}
+                    <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'dashboard.no_transactions'|trans({month: month_name}) }}</p>
+                {% elseif mode.value == 'detailed' %}
+                    <ul class="divide-y">
+                        {% for transaction in report.transactions %}
+                            {% set label = transaction.label|split("\n") %}
+                            <li class="flex items-start gap-4 px-4 py-3 sm:px-6" data-transaction>
+                                <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">
+                                    {{- transaction.date|format_date(pattern: 'd MMM') -}}
+                                </time>
+                                <div class="flex min-w-0 flex-1 flex-col gap-1">
+                                    <div>
+                                        <p class="text-sm font-medium break-words">{{ label|first }}</p>
+                                        {% for line in label|slice(1) %}
+                                            <p class="text-xs break-words text-muted-foreground">{{ line }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    <dl class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                        {% for term, value in {
+                                            'dashboard.detail.account': transaction.account.label,
+                                            'dashboard.detail.bank': transaction.account.bank.label,
+                                            'dashboard.detail.category': transaction.bankCategory,
+                                        }|filter(value => value) %}
+                                            <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
+                                                <dt class="font-medium">{{ term|trans }}</dt>
+                                                <dd>{{ value }}</dd>
+                                            </div>
+                                        {% endfor %}
+                                        {% if transaction.kind.value == 'deferred_card_purchase' %}
+                                            <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
+                                        {% endif %}
+                                    </dl>
+                                </div>
+                                <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <ul class="divide-y">
+                        {% for transaction in report.transactions %}
+                            {% set label = transaction.label|split("\n")|join(' · ') %}
+                            <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
+                                <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
+                                    {{- transaction.date|format_date(pattern: 'd MMM') -}}
+                                </time>
+                                <p class="min-w-0 flex-1 truncate text-sm font-medium" title="{{ label }}">{{ label }}</p>
+                                <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </twig:Card>
+        </turbo-frame>
     </section>
 {% elseif not importing %}
     <twig:Card class="mx-auto w-full max-w-lg items-center px-6 py-12 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95">

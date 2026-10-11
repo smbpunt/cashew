@@ -33,6 +33,15 @@ dashboard:
     balance: Solde
     transactions: Transactions
     no_transactions: Aucune transaction en {month}.
+    mode:
+        label: Affichage
+        simple: Simple
+        detailed: Détaillé
+    detail:
+        account: Compte
+        bank: Banque
+        category: Catégorie
+        deferred_card_purchase: Carte à débit différé
     importing:
         title: '{count, plural, one {Import de votre relevé en cours…} other {Import de vos # relevés en cours…}}'
         description: 'Cette page se mettra à jour toute seule une fois l’import terminé. Vous pouvez aussi la quitter : vos transactions vous attendront.'

@@ -33,6 +33,15 @@ dashboard:
     balance: Balance
     transactions: Transactions
     no_transactions: No transactions in {month}.
+    mode:
+        label: Display
+        simple: Simple
+        detailed: Detailed
+    detail:
+        account: Account
+        bank: Bank
+        category: Category
+        deferred_card_purchase: Deferred debit card
     importing:
         title: '{count, plural, one {Importing your statement…} other {Importing your # statements…}}'
         description: 'This page updates itself once it''s done. You can also leave: your transactions will be waiting for you.'
