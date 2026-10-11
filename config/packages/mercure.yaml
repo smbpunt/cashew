@@ -1,0 +1,14 @@
+mercure:
+    hubs:
+        default:
+            url: '%env(default::MERCURE_URL)%'
+            public_url: '%env(default::MERCURE_PUBLIC_URL)%'
+            jwt:
+                secret: '%env(MERCURE_JWT_SECRET)%'
+                publish: '*'
+                # Required by protocol 1.0 (RFC 9068). Taken from the pending 0.6 recipe
+                # (symfony/recipes#1589): drop this comment after "composer recipes:update"
+                claims:
+                    iss: '%env(MERCURE_JWT_ISSUER)%'
+                    sub: 'app'
+                    client_id: 'app'
