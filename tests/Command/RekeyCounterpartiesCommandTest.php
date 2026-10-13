@@ -9,7 +9,6 @@ use App\Entity\User;
 use App\Enum\Periodicity;
 use App\Enum\SeriesStatus;
 use App\Tests\EntityFactoryTrait;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -24,8 +23,7 @@ final class RekeyCounterpartiesCommandTest extends KernelTestCase
     {
         $kernel = self::bootKernel();
 
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->commandTester = new CommandTester(new Application($kernel)->find('app:counterparties:rekey'));
     }

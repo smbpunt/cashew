@@ -7,7 +7,6 @@ use App\Entity\Category;
 use App\Entity\User;
 use App\Enum\CategoryRole;
 use App\Tests\EntityFactoryTrait;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class TransferCategoryTest extends KernelTestCase
@@ -19,8 +18,7 @@ final class TransferCategoryTest extends KernelTestCase
     protected function setUp(): void
     {
         self::bootKernel();
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = $this->createUser('alice');
     }

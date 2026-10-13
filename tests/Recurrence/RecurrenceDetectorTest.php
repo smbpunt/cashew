@@ -11,7 +11,6 @@ use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
 use App\Recurrence\RecurrenceDetector;
 use App\Tests\EntityFactoryTrait;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class RecurrenceDetectorTest extends KernelTestCase
@@ -24,8 +23,7 @@ final class RecurrenceDetectorTest extends KernelTestCase
     protected function setUp(): void
     {
         self::bootKernel();
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = $this->createUser('alice');
         $this->account = $this->createAccount($this->user);

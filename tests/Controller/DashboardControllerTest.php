@@ -12,7 +12,6 @@ use App\Enum\Periodicity;
 use App\Enum\TransactionKind;
 use App\Tests\EntityFactoryTrait;
 use App\Tests\SwitchesLocaleTrait;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -33,8 +32,7 @@ final class DashboardControllerTest extends WebTestCase
         $this->client = self::createClient();
         self::mockTime('2026-10-11');
 
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = $this->createUser('alice');
         $this->client->loginUser($this->user);

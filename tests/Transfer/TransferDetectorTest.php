@@ -14,7 +14,6 @@ use App\Enum\Periodicity;
 use App\Enum\TransactionKind;
 use App\Tests\EntityFactoryTrait;
 use App\Transfer\TransferDetector;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class TransferDetectorTest extends KernelTestCase
@@ -29,13 +28,12 @@ final class TransferDetectorTest extends KernelTestCase
     protected function setUp(): void
     {
         self::bootKernel();
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = $this->createUser('alice');
         $this->checking = $this->createAccount($this->user);
         $this->revolut = $this->createAccount($this->user, Bank::Revolut, 'Compte personnel (EUR)', 'Compte personnel');
-        $this->import = $this->createImport('september.csv');
+        $this->import = $this->createImport($this->user, 'september.csv');
     }
 
     public function testTheTwoSidesOfMoneyMovedBetweenTheAccountsOfTheUserAreAnInternalTransfer(): void
@@ -54,7 +52,7 @@ final class TransferDetectorTest extends KernelTestCase
 
     public function testTheOtherSideMayComeFromAnEarlierImport(): void
     {
-        $received = $this->add($this->revolut, '2026-08-02', 'Sur la Pocket EUR Vacances depuis EUR', 4000, $this->createImport('pocket.csv'));
+        $received = $this->add($this->revolut, '2026-08-02', 'Sur la Pocket EUR Vacances depuis EUR', 4000, $this->createImport($this->user, 'pocket.csv'));
         $sent = $this->add($this->checking, '2026-08-01', "Virement émis\nVIR INST vers Revolut", -4000);
 
         $this->detect();
@@ -200,14 +198,6 @@ final class TransferDetectorTest extends KernelTestCase
         $this->entityManager->flush();
         self::getContainer()->get(TransferDetector::class)->detect($this->import);
         $this->entityManager->flush();
-    }
-
-    private function createImport(string $filename): StatementImport
-    {
-        $import = new StatementImport($this->user, $filename, null, hash('sha256', $filename), new \DateTimeImmutable());
-        $this->entityManager->persist($import);
-
-        return $import;
     }
 
     private function add(BankAccount $account, string $date, string $label, int $amount, ?StatementImport $import = null): Transaction

@@ -29,6 +29,15 @@ trait EntityFactoryTrait
      */
     private array $counterparties = [];
 
+    /**
+     * Takes the entity manager of the kernel, and empties the database: deleting the users deletes all they own.
+     */
+    private function resetDatabase(): void
+    {
+        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+    }
+
     private function createUser(string $login): User
     {
         $user = new User()->setLogin($login)->setPassword('not-a-real-hash');
@@ -44,6 +53,17 @@ trait EntityFactoryTrait
         $this->entityManager->persist($account);
 
         return $account;
+    }
+
+    /**
+     * In progress, its checksum that of its filename.
+     */
+    private function createImport(User $owner, string $filename, ?string $storedPath = null): StatementImport
+    {
+        $import = new StatementImport($owner, $filename, $storedPath, hash('sha256', $filename), new \DateTimeImmutable());
+        $this->entityManager->persist($import);
+
+        return $import;
     }
 
     private function createCategory(User $owner, string $name, ?Category $parent = null): Category

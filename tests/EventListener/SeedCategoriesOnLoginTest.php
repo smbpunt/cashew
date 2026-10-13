@@ -28,8 +28,7 @@ final class SeedCategoriesOnLoginTest extends WebTestCase
         // Login throttling state lives in this pool and would otherwise leak between tests and runs
         self::getContainer()->get('cache.rate_limiter')->clear();
 
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = new User()->setLogin('alice');
         $this->user->setPassword(self::getContainer()->get(UserPasswordHasherInterface::class)->hashPassword($this->user, self::PASSWORD));

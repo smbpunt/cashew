@@ -15,7 +15,7 @@ use App\Message\ImportStatement;
 use App\MessageHandler\ImportStatementHandler;
 use App\Statement\Exception\DuplicateStatementException;
 use App\Statement\StatementUploader;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\EntityFactoryTrait;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -25,21 +25,17 @@ use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 final class ImportStatementHandlerTest extends KernelTestCase
 {
     use ClockSensitiveTrait;
+    use EntityFactoryTrait;
 
     private const string FIXTURES = __DIR__.'/../Fixtures/Statement/';
 
-    private EntityManagerInterface $entityManager;
     private User $user;
 
     protected function setUp(): void
     {
         self::bootKernel();
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
-
-        $this->user = new User()->setLogin('alice')->setPassword('not-a-real-hash');
-        $this->entityManager->persist($this->user);
-        $this->entityManager->flush();
+        $this->resetDatabase();
+        $this->user = $this->createUser('alice');
     }
 
     public function testImportsTheWholeMonthsOfAStatement(): void
@@ -103,9 +99,7 @@ final class ImportStatementHandlerTest extends KernelTestCase
         $this->uploadAndImport('credit_agricole.csv', append: "\n");
         self::assertSame($count, $counterparties->count(['owner' => $this->user->getId()]));
 
-        $this->user = new User()->setLogin('bob')->setPassword('not-a-real-hash');
-        $this->entityManager->persist($this->user);
-        $this->entityManager->flush();
+        $this->user = $this->createUser('bob');
         $this->uploadAndImport('credit_agricole.csv');
 
         self::assertSame($count, $counterparties->count(['owner' => $this->user->getId()]));

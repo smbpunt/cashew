@@ -2,12 +2,13 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\EntityFactoryTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class HomeControllerTest extends WebTestCase
 {
+    use EntityFactoryTrait;
+
     public function testIntroducesTheApplicationAndLeadsToTheLoginPage(): void
     {
         $client = self::createClient();
@@ -25,11 +26,8 @@ final class HomeControllerTest extends WebTestCase
     public function testSendsALoggedInUserToTheDashboard(): void
     {
         $client = self::createClient();
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $entityManager->createQuery('DELETE FROM '.User::class)->execute();
-        $user = new User()->setLogin('alice')->setPassword('not-a-real-hash');
-        $entityManager->persist($user);
-        $entityManager->flush();
+        $this->resetDatabase();
+        $user = $this->createUser('alice');
 
         $client->loginUser($user);
         $client->request('GET', '/');

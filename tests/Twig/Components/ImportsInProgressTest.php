@@ -29,18 +29,17 @@ final class ImportsInProgressTest extends WebTestCase
         self::createClient();
         self::mockTime('2026-10-11');
 
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = $this->createUser('alice');
     }
 
     public function testFollowsTheImportsOfTheUserUntilTheyAreOverThenGoesBackToTheDashboard(): void
     {
-        $history = $this->createImport($this->user, 'history.csv');
-        $revolut = $this->createImport($this->user, 'revolut.csv');
+        $history = $this->createImport($this->user, 'history.csv', 'history.csv');
+        $revolut = $this->createImport($this->user, 'revolut.csv', 'revolut.csv');
         $revolut->start();
-        $this->createImport($this->createUser('bob'), 'not-mine.csv');
+        $this->createImport($this->createUser('bob'), 'not-mine.csv', 'not-mine.csv');
         $this->entityManager->flush();
 
         $component = $this->component();
@@ -68,7 +67,7 @@ final class ImportsInProgressTest extends WebTestCase
 
     public function testGoesToTheReviewOfTheRecurringTransactionsFoundByTheImportsItFollowed(): void
     {
-        $history = $this->createImport($this->user, 'history.csv');
+        $history = $this->createImport($this->user, 'history.csv', 'history.csv');
         $this->entityManager->persist(new RecurringSeries($this->createAccount($this->user), $this->createCounterparty($this->user, 'free mobile'), false, Periodicity::Monthly, -1999, 90, new \DateTimeImmutable('2026-09-15')));
         $this->entityManager->flush();
 
@@ -95,13 +94,5 @@ final class ImportsInProgressTest extends WebTestCase
     private function component(): TestLiveComponent
     {
         return $this->createLiveComponent(ImportsInProgress::class)->actingAs($this->user);
-    }
-
-    private function createImport(User $owner, string $filename): StatementImport
-    {
-        $import = new StatementImport($owner, $filename, $filename, hash('sha256', $filename), new \DateTimeImmutable());
-        $this->entityManager->persist($import);
-
-        return $import;
     }
 }

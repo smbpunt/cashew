@@ -140,8 +140,7 @@ final class LocaleControllerTest extends WebTestCase
     private function logInWithDefaultCategories(): array
     {
         $client = self::createClient();
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $user = $this->createUser('alice');
         self::getContainer()->get(CategorySeeder::class)->seed($user);

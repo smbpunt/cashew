@@ -6,7 +6,6 @@ use App\Category\IconSearch;
 use App\Entity\User;
 use App\Tests\EntityFactoryTrait;
 use App\Twig\Components\IconPicker;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -30,8 +29,7 @@ final class IconPickerTest extends WebTestCase
         // The same container from one request to the next, for Iconify to stay mocked
         $this->client->disableReboot();
 
-        $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->createQuery('DELETE FROM '.User::class)->execute();
+        $this->resetDatabase();
 
         $this->user = $this->createUser('alice');
     }

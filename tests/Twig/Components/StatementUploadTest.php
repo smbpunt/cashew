@@ -6,6 +6,7 @@ use App\Entity\StatementImport;
 use App\Entity\User;
 use App\Message\ImportStatement;
 use App\MessageHandler\ImportStatementHandler;
+use App\Tests\EntityFactoryTrait;
 use App\Tests\SwitchesLocaleTrait;
 use App\Twig\Components\StatementUpload;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,6 +22,7 @@ use Symfony\UX\LiveComponent\Test\TestLiveComponent;
 final class StatementUploadTest extends WebTestCase
 {
     use ClockSensitiveTrait;
+    use EntityFactoryTrait;
     use InteractsWithLiveComponents;
     use SwitchesLocaleTrait;
 
@@ -34,12 +36,8 @@ final class StatementUploadTest extends WebTestCase
         $this->client = self::createClient();
         self::mockTime('2026-10-11');
 
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $entityManager->createQuery('DELETE FROM '.User::class)->execute();
-
-        $this->user = new User()->setLogin('alice')->setPassword('not-a-real-hash');
-        $entityManager->persist($this->user);
-        $entityManager->flush();
+        $this->resetDatabase();
+        $this->user = $this->createUser('alice');
     }
 
     public function testAsksForTheFullHistoryFirst(): void
