@@ -193,13 +193,7 @@ final class StatementUpload
 
     public function isProcessing(): bool
     {
-        foreach ($this->getImports() as $import) {
-            if (!$import->getStatus()->isFinished()) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->getImports(), static fn (StatementImport $import): bool => !$import->getStatus()->isFinished());
     }
 
     /**

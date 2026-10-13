@@ -52,12 +52,6 @@ final readonly class StatementSample
 
     public function contains(string ...$needles): bool
     {
-        foreach ($needles as $needle) {
-            if (!str_contains($this->text, $needle)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($needles, fn (string $needle): bool => str_contains($this->text, $needle));
     }
 }

@@ -23,10 +23,8 @@ final class ThemeSwitcherTest extends KernelTestCase
         self::assertSame(['Light', 'Soft light', 'Dark'], $options->extract(['title']));
         // The chosen theme is only known to the browser, which presses its button
         self::assertSame(['false', 'false', 'false'], $options->extract(['aria-pressed']));
-        foreach ($options as $option) {
-            self::assertSame('theme#choose', $option->getAttribute('data-action'));
-            self::assertSame('icon-sm', $option->getAttribute('data-size'));
-        }
+        self::assertSame(['theme#choose', 'theme#choose', 'theme#choose'], $options->extract(['data-action']));
+        self::assertSame(['icon-sm', 'icon-sm', 'icon-sm'], $options->extract(['data-size']));
     }
 
     public function testTakesTheButtonSizeAndPassesAttributesToTheGroup(): void

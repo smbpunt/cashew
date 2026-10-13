@@ -89,9 +89,13 @@ final class SeedCategoriesOnLoginTest extends WebTestCase
      */
     private function categoryPaths(): array
     {
-        return array_map(
+        $paths = array_map(
             static fn (Category $category): string => $category->getPath(),
             self::getContainer()->get(EntityManagerInterface::class)->getRepository(Category::class)->findBy(['owner' => $this->user->getId()]),
         );
+        // In no particular order from the database
+        sort($paths);
+
+        return $paths;
     }
 }

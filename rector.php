@@ -1,6 +1,7 @@
 <?php
 
 use Rector\Config\RectorConfig;
+use Rector\Php82\Rector\Class_\ReadOnlyClassRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -13,6 +14,8 @@ return RectorConfig::configure()
         __DIR__.'/config/reference.php',
         // Géré par la recipe phpunit/phpunit : éviter les diffs à chaque recipe:update
         __DIR__.'/tests/bootstrap.php',
+        // Des services que le container peut rendre lazy : un proxy lazy ne peut pas étendre une classe readonly
+        ReadOnlyClassRector::class => [__DIR__.'/src/Twig/Components'],
     ])
     ->withPhpSets()
     ->withPreparedSets(symfonyCodeQuality: true)
