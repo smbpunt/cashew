@@ -27,21 +27,17 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
-use Symfony\UX\LiveComponent\ComponentToolsTrait;
 use Symfony\UX\LiveComponent\DefaultActionTrait;
 
 /**
  * Uploads statements, then follows their imports until they're over: the Messenger worker announces each status
  * change through Mercure, and the component also polls in case that update is missed. Once they're all done, it says
  * so, and leaves: for the review of the recurring series they brought up, if any, for the dashboard otherwise.
- *
- * Emits "statement:imported" with the import's id when an import is done, for the rest of the page to refresh.
  */
 #[AsLiveComponent]
 #[IsGranted('ROLE_USER')]
 final class StatementUpload
 {
-    use ComponentToolsTrait;
     use DefaultActionTrait;
 
     /**
@@ -51,14 +47,6 @@ final class StatementUpload
      */
     #[LiveProp]
     public array $importIds = [];
-
-    /**
-     * The imports already announced as done.
-     *
-     * @var list<int>
-     */
-    #[LiveProp]
-    public array $announcedIds = [];
 
     /**
      * Whether the imports followed are all done: the review of the recurring series they brought up shows next, or
@@ -159,14 +147,6 @@ final class StatementUpload
             $session->getFlashBag()->add('success', new TranslatableMessage('statement.import.completed.flash', [
                 'count' => array_sum(array_map(static fn (StatementImport $import): int => $import->getImportedCount(), $imports)),
             ]));
-        }
-
-        foreach ($imports as $import) {
-            $id = (int) $import->getId();
-            if ($import->getStatus()->isFinished() && !\in_array($id, $this->announcedIds, true)) {
-                $this->announcedIds[] = $id;
-                $this->emit('statement:imported', ['id' => $id]);
-            }
         }
     }
 

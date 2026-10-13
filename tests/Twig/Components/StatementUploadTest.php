@@ -68,17 +68,11 @@ final class StatementUploadTest extends WebTestCase
         self::assertStringContainsString('8 imported', (string) $rendered);
         self::assertStringNotContainsString('data-poll', (string) $rendered);
         self::assertCount(0, $rendered->crawler()->filter('[data-controller="statement-import-updates"]'));
-        self::assertCount(2, $component->getEmittedEvents($rendered));
-        self::assertNotNull($component->getEmittedEvent($rendered, 'statement:imported'));
 
         // All done: says so, then leaves for the dashboard
         self::assertStringContainsString('Import complete', (string) $rendered);
         self::assertCount(1, $rendered->crawler()->filter('[data-controller="import-complete"][data-import-complete-url-value="/dashboard"]'));
         self::assertCount(0, $rendered->crawler()->filter('form'));
-
-        // Announced once only
-        $rendered = $component->call('refresh')->render();
-        self::assertCount(0, $component->getEmittedEvents($rendered));
 
         $this->client->request('GET', '/dashboard');
         self::assertSelectorCount(1, 'main > [data-slot="alert"]');
