@@ -43,6 +43,26 @@ class RecurringSeriesRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * The owner's spending the user confirmed is recurring, with its category, by name.
+     *
+     * @return list<RecurringSeries>
+     */
+    public function findConfirmedSpending(User $owner): array
+    {
+        return $this->owned($owner)
+            ->addSelect('c', 'cp')
+            ->leftJoin('s.category', 'c')
+            ->leftJoin('c.parent', 'cp')
+            ->andWhere('s.status = :confirmed')
+            ->andWhere('s.income = false')
+            ->setParameter('confirmed', SeriesStatus::Confirmed)
+            ->orderBy('s.name', 'ASC')
+            ->addOrderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function countSuggested(User $owner): int
     {
         return (int) $this->owned($owner)

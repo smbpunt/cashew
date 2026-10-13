@@ -171,6 +171,27 @@ final class RecurrenceDetectorTest extends KernelTestCase
         self::assertSame('2026-09-04', $series->getLastSeenOn()->format('Y-m-d'));
     }
 
+    public function testASeriesTheUserSaidEndedGoesOnWithAnOccurrenceAfter(): void
+    {
+        foreach (['06', '07', '08'] as $month) {
+            $this->add("2026-$month-05", "Prélèvement\nNETFLIX", -1349);
+        }
+        [$series] = $this->detect();
+        $series->confirm('Netflix', null);
+        $series->end(new \DateTimeImmutable('2026-09-10'));
+        $this->entityManager->flush();
+
+        // The last one, before it ended
+        $this->add('2026-09-05', "Prélèvement\nNETFLIX", -1349);
+        [$series] = $this->detect();
+        self::assertSame('2026-09-05', $series->getLastSeenOn()->format('Y-m-d'));
+        self::assertTrue($series->isEnded());
+
+        $this->add('2026-10-05', "Prélèvement\nNETFLIX", -1349);
+        [$series] = $this->detect();
+        self::assertFalse($series->isEnded());
+    }
+
     public function testTwoContractsOfTheSameCounterpartyAreTwoSeries(): void
     {
         foreach (['07', '08', '09'] as $month) {

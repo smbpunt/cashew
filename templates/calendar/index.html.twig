@@ -1,0 +1,212 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ 'calendar.title'|trans }}{% endblock %}
+
+{% block content %}
+{% if calendar %}
+    {% set month_name = calendar.month|format_date(pattern: 'LLLL y')|capitalize %}
+    {# What the links and the forms of the page carry along: the month, and the filter #}
+    {% set query = {month: calendar.month|date('Y-m'), show: calendar.filter.value} %}
+
+    <section aria-labelledby="month" class="flex flex-col gap-6">
+        <div class="flex items-center justify-between gap-4">
+            <h1 id="month" class="text-2xl font-bold tracking-tight">{{ month_name }}</h1>
+
+            <nav class="flex items-center gap-1" aria-label="{{ 'calendar.months'|trans }}">
+                {% for link in [
+                    {month: calendar.previousMonth, label: 'calendar.previous_month', icon: 'm15 18-6-6 6-6', rel: 'prev'},
+                    {month: calendar.nextMonth, label: 'calendar.next_month', icon: 'm9 18 6-6-6-6', rel: 'next'},
+                ] %}
+                    {% set icon %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ link.icon }}"/></svg>{% endset %}
+                    {% if link.month %}
+                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_calendar', query|merge({month: link.month|date('Y-m')})) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
+                    {% else %}
+                        <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label|trans }}">{{ icon }}</twig:Button>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        </div>
+
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <dl class="flex flex-wrap gap-x-8 gap-y-2">
+                {% for totals in calendar.totals %}
+                    <div data-currency="{{ totals.currency }}">
+                        <dt class="text-sm text-muted-foreground">{{ 'calendar.total'|trans }}</dt>
+                        <dd class="flex flex-wrap items-baseline gap-x-2">
+                            <twig:Money :amount="-totals.total" :currency="totals.currency" class="text-2xl font-semibold tracking-tight" data-total />
+                            {% if totals.expected != 0 %}
+                                <span class="text-sm text-muted-foreground" data-expected-total>
+                                    {{- 'calendar.expected_total'|trans({amount: (-totals.expected)|major_units(totals.currency)|format_currency(totals.currency)}) -}}
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                {% endfor %}
+            </dl>
+
+            <div role="group" aria-label="{{ 'calendar.filter.label'|trans }}" class="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+                {% for option in enum('App\\Enum\\CalendarFilter').cases() %}
+                    <twig:Button
+                        as="a"
+                        variant="ghost"
+                        size="xs"
+                        href="{{ path('app_calendar', query|merge({show: option.value})) }}"
+                        aria-current="{{ option == calendar.filter ? 'true' : 'false' }}"
+                        class="text-muted-foreground hover:bg-background/60 aria-[current=true]:bg-background aria-[current=true]:text-foreground aria-[current=true]:shadow-sm"
+                        data-filter="{{ option.value }}"
+                    >{{ ('calendar.filter.' ~ option.value)|trans }}</twig:Button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <twig:Card class="gap-0 overflow-hidden py-0">
+            <div class="grid grid-cols-7 border-b bg-muted/40" aria-hidden="true">
+                {% for day in calendar.weeks|first %}
+                    <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        <span class="sm:hidden">{{ day|format_date(pattern: 'EEEEE') }}</span>
+                        <span class="hidden sm:inline">{{ day|format_date(pattern: 'EEE')|capitalize }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            {# The list below tells the same to a screen reader, and on a small screen #}
+            <div class="grid grid-cols-7" aria-hidden="true" data-calendar>
+                {% for week in calendar.weeks %}
+                    {% for day in week %}
+                        {% set in_month = calendar.isInMonth(day) %}
+                        {% set entries = in_month ? calendar.entriesOn(day) : [] %}
+                        <div
+                            class="{{ html_classes('flex min-h-14 min-w-0 flex-col gap-1 border-b p-1 sm:min-h-28 sm:p-1.5', {
+                                'border-e': not loop.last,
+                                'border-b-0': loop.parent.loop.last,
+                                'bg-muted/30': not in_month,
+                            }) }}"
+                            {% if in_month %}data-day="{{ day|date('Y-m-d') }}"{% endif %}
+                        >
+                            <span class="{{ html_classes('flex size-6 items-center justify-center rounded-full text-xs tabular-nums', {
+                                'text-muted-foreground/50': not in_month,
+                                'text-muted-foreground': in_month and not calendar.isToday(day),
+                                'bg-primary font-semibold text-primary-foreground': calendar.isToday(day),
+                            }) }}">{{ day|date('j') }}</span>
+
+                            {% if entries is not empty %}
+                                {# A dot per debit on a small screen, hollow when expected #}
+                                <div class="flex flex-wrap gap-0.5 px-1 sm:hidden">
+                                    {% for entry in entries %}
+                                        <span class="{{ html_classes('size-1.5 rounded-full', entry.expected ? 'border border-primary' : 'bg-primary') }}"></span>
+                                    {% endfor %}
+                                </div>
+                                <ul class="hidden flex-col gap-1 sm:flex">
+                                    {% for entry in entries|slice(0, 3) %}
+                                        <li
+                                            class="{{ html_classes('flex flex-col rounded-md px-1.5 py-0.5 text-[11px] leading-tight', entry.expected ? 'border border-dashed border-primary/40 text-muted-foreground' : 'bg-primary/10 soft:bg-primary/20') }}"
+                                            title="{{ entry.name }}"
+                                            data-entry="{{ entry.name }}"
+                                            data-expected="{{ entry.expected ? 'true' : 'false' }}"
+                                        >
+                                            <span class="truncate font-medium">{{ entry.name }}</span>
+                                            <twig:Money :amount="entry.amount" :currency="entry.currency" />
+                                        </li>
+                                    {% endfor %}
+                                    {% if entries|length > 3 %}
+                                        <li class="px-1.5 text-[11px] text-muted-foreground">{{ 'calendar.more'|trans({count: entries|length - 3}) }}</li>
+                                    {% endif %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </twig:Card>
+
+        <twig:Card class="gap-0 py-0">
+            <div class="border-b px-4 py-3 sm:px-6">
+                <h2 class="font-semibold">{{ 'calendar.upcoming'|trans }}</h2>
+            </div>
+            {% if calendar.entries is empty %}
+                <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ ('calendar.empty.' ~ calendar.filter.value)|trans({month: month_name}) }}</p>
+            {% else %}
+                <ul class="divide-y" data-entries>
+                    {% for entry in calendar.entries %}
+                        <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-entry="{{ entry.name }}" data-expected="{{ entry.expected ? 'true' : 'false' }}">
+                            <time datetime="{{ entry.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
+                                {{- entry.date|format_date(pattern: 'd MMM') -}}
+                            </time>
+                            <twig:CategoryIcon :category="entry.category" />
+                            <div class="flex min-w-0 flex-1 items-center gap-2">
+                                {% if entry.transaction %}
+                                    <a href="{{ path('app_transaction_show', {id: entry.transaction.id}) }}" class="truncate text-sm font-medium hover:underline" title="{{ entry.transaction.oneLineLabel }}">{{ entry.name }}</a>
+                                {% else %}
+                                    <span class="truncate text-sm font-medium">{{ entry.name }}</span>
+                                    <twig:Badge variant="outline" class="border-dashed text-muted-foreground">{{ 'calendar.expected'|trans }}</twig:Badge>
+                                {% endif %}
+                            </div>
+                            <twig:Money :amount="entry.amount" :currency="entry.currency" class="text-sm font-medium" />
+                            {% if entry.expected %}
+                                <twig:SeriesAction route="app_calendar_series_end" :series="entry.series" :query="query" :label="'calendar.actions.mark_ended'|trans" :ariaLabel="'calendar.actions.end_label'|trans({name: entry.name})" variant="ghost" />
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </twig:Card>
+
+        {% if calendar.toCheck is not empty %}
+            <twig:Card class="gap-0 py-0" data-to-check>
+                <div class="flex flex-col gap-1 border-b px-4 py-3 sm:px-6">
+                    <h2 class="font-semibold">{{ 'calendar.to_check.title'|trans({count: calendar.toCheck|length}) }}</h2>
+                    <p class="text-sm text-muted-foreground">{{ 'calendar.to_check.description'|trans }}</p>
+                </div>
+                <ul class="divide-y">
+                    {% for series in calendar.toCheck %}
+                        <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6" data-series="{{ series.name }}">
+                            <twig:CategoryIcon :category="series.category" />
+                            <div class="flex min-w-0 flex-1 flex-col">
+                                <span class="truncate text-sm font-medium">{{ series.name }}</span>
+                                <span class="text-xs text-muted-foreground">
+                                    {{ ('recurrence.periodicity.' ~ series.periodicity.value)|trans }} ·
+                                    {{ 'calendar.to_check.since'|trans({date: series.lastSeenOn|format_date('long')}) }}
+                                </span>
+                            </div>
+                            <twig:Money :amount="series.typicalAmount" :currency="series.currency" class="text-sm font-medium" />
+                            <div class="flex items-center gap-1">
+                                <twig:SeriesAction route="app_calendar_series_end" :series="series" :query="query" :label="'calendar.actions.end'|trans" />
+                                <twig:SeriesAction route="app_calendar_series_keep" :series="series" :query="query" :label="'calendar.actions.keep'|trans" variant="ghost" />
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </twig:Card>
+        {% endif %}
+
+        {% if calendar.ended is not empty %}
+            <details class="group rounded-xl border bg-card text-card-foreground" data-ended>
+                <summary class="flex cursor-pointer items-center justify-between gap-4 px-4 py-3 text-sm font-medium text-muted-foreground select-none sm:px-6">
+                    {{ 'calendar.ended.title'|trans({count: calendar.ended|length}) }}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-4 transition-transform group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <ul class="divide-y border-t">
+                    {% for series in calendar.ended %}
+                        <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6" data-series="{{ series.name }}">
+                            <twig:CategoryIcon :category="series.category" />
+                            <div class="flex min-w-0 flex-1 flex-col">
+                                <span class="truncate text-sm font-medium">{{ series.name }}</span>
+                                <span class="text-xs text-muted-foreground">{{ 'calendar.ended.on'|trans({date: series.endedOn|format_date('long')}) }}</span>
+                            </div>
+                            <twig:Money :amount="series.typicalAmount" :currency="series.currency" class="text-sm text-muted-foreground" />
+                            <twig:SeriesAction route="app_calendar_series_resume" :series="series" :query="query" :label="'calendar.actions.resume'|trans" variant="ghost" />
+                        </li>
+                    {% endfor %}
+                </ul>
+            </details>
+        {% endif %}
+    </section>
+{% else %}
+    <twig:Card class="mx-auto w-full max-w-lg items-center px-6 py-12 text-center">
+        <div class="flex flex-col gap-2">
+            <h1 class="text-xl font-semibold tracking-tight">{{ 'dashboard.empty.title'|trans }}</h1>
+            <p class="text-sm text-balance text-muted-foreground">{{ 'dashboard.empty.description'|trans }}</p>
+        </div>
+        <twig:Button as="a" size="lg" href="{{ path('app_statement_import') }}">{{ 'dashboard.empty.import'|trans }}</twig:Button>
+    </twig:Card>
+{% endif %}
+{% endblock %}

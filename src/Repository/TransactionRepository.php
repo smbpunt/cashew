@@ -83,6 +83,31 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
+     * The day of the last transaction of each of the owner's accounts that has some: up to when it's known.
+     *
+     * @return array<int, \DateTimeImmutable> by account id
+     */
+    public function findLastDates(User $owner): array
+    {
+        /** @var list<array{account: int|string, last: string}> $rows */
+        $rows = $this->createQueryBuilder('t')
+            ->select('IDENTITY(t.account) AS account', 'MAX(t.date) AS last')
+            ->join('t.account', 'a')
+            ->where('a.owner = :owner')
+            ->setParameter('owner', $owner)
+            ->groupBy('t.account')
+            ->getQuery()
+            ->getArrayResult();
+
+        $dates = [];
+        foreach ($rows as $row) {
+            $dates[(int) $row['account']] = new \DateTimeImmutable($row['last']);
+        }
+
+        return $dates;
+    }
+
+    /**
      * The days of the first and last transactions each import brought, deferred card settlements aside; none for an
      * import that brought none.
      *

@@ -18,6 +18,7 @@ home:
 nav:
     label: Principale
     dashboard: Tableau de bord
+    calendar: Calendrier
     import: Importer
     categories: Catégories
     review: À revoir
@@ -64,6 +65,37 @@ dashboard:
         description: Importez les relevés de vos comptes bancaires pour voir vos entrées et vos sorties d’argent.
         waiting_for_month_end: 'Vos relevés ne contenaient que des transactions du mois en cours : exportez un nouveau relevé une fois le mois terminé, à partir du {date}.'
         import: Importer des relevés
+
+calendar:
+    title: Calendrier
+    months: Mois
+    previous_month: Mois précédent
+    next_month: Mois suivant
+    filter:
+        label: Afficher
+        recurring: Récurrentes
+        all: Toutes les dépenses
+    total: Sorties
+    expected_total: 'dont {amount} prévus'
+    expected: prévu
+    more: '{count, plural, one {# de plus} other {# de plus}}'
+    upcoming: Échéances du mois
+    empty:
+        recurring: Aucune dépense récurrente en {month}.
+        all: Aucune dépense en {month}.
+    to_check:
+        title: '{count, plural, one {Un abonnement à vérifier} other {# abonnements à vérifier}}'
+        description: Pas revu quand il était attendu. Est-il terminé ?
+        since: 'Vu pour la dernière fois le {date}'
+    ended:
+        title: '{count, plural, one {Un abonnement terminé} other {# abonnements terminés}}'
+        on: 'Terminé le {date}'
+    actions:
+        end: Terminé
+        mark_ended: Marquer terminé
+        end_label: 'Marquer « {name} » comme terminé'
+        keep: Toujours actif
+        resume: Réactiver
 
 transaction:
     show:

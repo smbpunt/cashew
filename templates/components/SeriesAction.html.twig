@@ -1,0 +1,18 @@
+{%- props
+    ## string The route of the action on the series: app_calendar_series_end, _keep or _resume.
+    route,
+    ## RecurringSeries The series to act on.
+    series,
+    ## array The query to come back to the calendar with: its month and filter.
+    query = {},
+    ## string What the button says.
+    label,
+    ## string What it says to a screen reader, when the label doesn't tell which series.
+    ariaLabel = null,
+    ## string The visual style variant of the button.
+    variant = 'outline'
+-%}
+<form method="post" action="{{ path(route, {id: series.id}|merge(query)) }}" {{ attributes }}>
+    <input type="hidden" name="_token" value="{{ csrf_token('series-' ~ series.id) }}">
+    <twig:Button type="submit" :variant="variant" size="xs" aria-label="{{ ariaLabel ?? label }}" data-series-action="{{ route|split('_')|last }}">{{ label }}</twig:Button>
+</form>

@@ -4,10 +4,13 @@ namespace App\Tests;
 
 use App\Entity\BankAccount;
 use App\Entity\Category;
+use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Bank;
+use App\Enum\Periodicity;
+use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -56,5 +59,28 @@ trait EntityFactoryTrait
         $this->entityManager->persist($transaction);
 
         return $transaction;
+    }
+
+    /**
+     * A series named as the user confirmed it by default, of credits for a positive amount.
+     */
+    private function createSeries(
+        BankAccount $account,
+        string $name,
+        int $amount,
+        string $lastSeenOn,
+        Periodicity $periodicity = Periodicity::Monthly,
+        SeriesStatus $status = SeriesStatus::Confirmed,
+        ?Category $category = null,
+    ): RecurringSeries {
+        $series = new RecurringSeries($account, mb_strtolower($name), $amount > 0, $name, $periodicity, $amount, 90, new \DateTimeImmutable($lastSeenOn));
+        match ($status) {
+            SeriesStatus::Confirmed => $series->confirm($name, $category),
+            SeriesStatus::Rejected => $series->reject(),
+            SeriesStatus::Suggested => null,
+        };
+        $this->entityManager->persist($series);
+
+        return $series;
     }
 }

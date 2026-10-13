@@ -28,6 +28,18 @@ class RecurringSeries
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Category $category = null;
 
+    /**
+     * The day the user said it ended: it's no longer expected.
+     */
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $endedOn = null;
+
+    /**
+     * Up to when the user said it still goes on, though an occurrence was missing.
+     */
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $stillActiveOn = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -141,6 +153,21 @@ class RecurringSeries
         return $this->lastSeenOn;
     }
 
+    public function isEnded(): bool
+    {
+        return null !== $this->endedOn;
+    }
+
+    public function getEndedOn(): ?\DateTimeImmutable
+    {
+        return $this->endedOn;
+    }
+
+    public function getStillActiveOn(): ?\DateTimeImmutable
+    {
+        return $this->stillActiveOn;
+    }
+
     public function confirm(string $name, ?Category $category): void
     {
         $this->status = SeriesStatus::Confirmed;
@@ -153,11 +180,36 @@ class RecurringSeries
         $this->status = SeriesStatus::Rejected;
     }
 
+    public function end(\DateTimeImmutable $on): void
+    {
+        $this->endedOn = $on;
+    }
+
+    public function resume(): void
+    {
+        $this->endedOn = null;
+    }
+
+    /**
+     * Still going on as of that day, though an occurrence was missing: until another is.
+     */
+    public function keepActive(\DateTimeImmutable $on): void
+    {
+        $this->stillActiveOn = $on;
+    }
+
+    /**
+     * An occurrence after the day it ended tells it goes on, or started again: the last one before, its last.
+     */
     public function refresh(Periodicity $periodicity, int $typicalAmount, int $confidence, \DateTimeImmutable $lastSeenOn): void
     {
         $this->periodicity = $periodicity;
         $this->typicalAmount = $typicalAmount;
         $this->confidence = $confidence;
         $this->lastSeenOn = $lastSeenOn;
+
+        if (null !== $this->endedOn && $lastSeenOn->format('Y-m-d') > $this->endedOn->format('Y-m-d')) {
+            $this->endedOn = null;
+        }
     }
 }

@@ -18,6 +18,7 @@ home:
 nav:
     label: Main
     dashboard: Dashboard
+    calendar: Calendar
     import: Import
     categories: Categories
     review: To review
@@ -64,6 +65,37 @@ dashboard:
         description: Import the statements of your bank accounts to see your income and spending.
         waiting_for_month_end: 'Your statements only held transactions of the month in progress: export a new statement once it''s over, from {date}.'
         import: Import statements
+
+calendar:
+    title: Calendar
+    months: Months
+    previous_month: Previous month
+    next_month: Next month
+    filter:
+        label: Show
+        recurring: Recurring
+        all: All spending
+    total: Spending
+    expected_total: 'including {amount} expected'
+    expected: expected
+    more: '{count, plural, one {# more} other {# more}}'
+    upcoming: Due this month
+    empty:
+        recurring: No recurring spending in {month}.
+        all: No spending in {month}.
+    to_check:
+        title: '{count, plural, one {A subscription to check} other {# subscriptions to check}}'
+        description: Not seen when expected. Did it end?
+        since: 'Last seen on {date}'
+    ended:
+        title: '{count, plural, one {An ended subscription} other {# ended subscriptions}}'
+        on: 'Ended on {date}'
+    actions:
+        end: Ended
+        mark_ended: Mark as ended
+        end_label: 'Mark “{name}” as ended'
+        keep: Still active
+        resume: Resume
 
 transaction:
     show:
