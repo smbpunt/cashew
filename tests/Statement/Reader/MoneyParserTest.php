@@ -30,12 +30,15 @@ final class MoneyParserTest extends TestCase
         yield 'ISO code' => ['12,30 CHF', 1230, 'CHF'];
         yield 'minus sign' => ["\u{2212}3,00", -300, null];
         yield 'plus sign' => ['+3,00', 300, null];
+        yield 'yens have no minor units' => ['¥1,234', 1234, 'JPY'];
+        yield 'zero yen cents' => ['1 234,00 JPY', 1234, 'JPY'];
+        yield 'dinars have three' => ['1,5 KWD', 1500, 'KWD'];
     }
 
     #[DataProvider('amounts')]
     public function testParse(string $value, int $amount, ?string $currency): void
     {
-        $money = new MoneyParser()->parse($value);
+        $money = new MoneyParser()->parse($value, 'EUR');
 
         self::assertSame($amount, $money->amount);
         self::assertSame($currency, $money->currency);
@@ -51,6 +54,7 @@ final class MoneyParserTest extends TestCase
         yield 'misplaced thousands separator' => ['12 34,00'];
         yield 'unknown currency' => ['12,00 ¤'];
         yield 'symbols on both sides' => ['€12,00€'];
+        yield 'yen cents' => ['¥12,50'];
     }
 
     #[DataProvider('notAmounts')]
@@ -58,6 +62,14 @@ final class MoneyParserTest extends TestCase
     {
         $this->expectException(UnreadableStatementException::class);
 
-        new MoneyParser()->parse($value);
+        new MoneyParser()->parse($value, 'EUR');
+    }
+
+    public function testAnAmountWithoutCurrencyIsInTheStatementOne(): void
+    {
+        $money = new MoneyParser()->parse('1 234', 'JPY');
+
+        self::assertSame(1234, $money->amount);
+        self::assertNull($money->currency);
     }
 }

@@ -79,7 +79,7 @@ final readonly class RevolutParser implements StatementParser
                 continue;
             }
 
-            $money = $this->money->parse($record[$columns['amount']] ?? '');
+            $money = $this->money->parse($record[$columns['amount']] ?? '', $account->currency);
             if (null !== $money->currency && $money->currency !== $account->currency) {
                 throw new UnreadableStatementException('statement.error.foreign_currency_amount', ['account' => $account->externalId, 'currency' => $money->currency]);
             }

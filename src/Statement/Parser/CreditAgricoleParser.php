@@ -26,6 +26,7 @@ final readonly class CreditAgricoleParser implements StatementParser
     private const string SEPARATOR = ';';
     private const string ENCODING = 'Windows-1252';
     private const string HEADER = 'Date;Libellé;Débit euros;Crédit euros;';
+    private const string CURRENCY = 'EUR';
 
     public function __construct(
         private CsvReader $csv,
@@ -56,7 +57,7 @@ final readonly class CreditAgricoleParser implements StatementParser
 
             // "Compte de Dépôt carte n° 12345678901"
             if (preg_match('/^(?<label>.+?)\s+n°\s*(?<number>\d+)$/u', $first, $matches)) {
-                $account = new AccountRef($matches['number'], $matches['label'], 'EUR');
+                $account = new AccountRef($matches['number'], $matches['label'], self::CURRENCY);
                 $inCardStatement = false;
                 continue;
             }
@@ -85,7 +86,7 @@ final readonly class CreditAgricoleParser implements StatementParser
                 default => TransactionKind::Regular,
             };
 
-            yield new ParsedTransaction($account, $date, $label, $amount, 'EUR', $kind);
+            yield new ParsedTransaction($account, $date, $label, $amount, self::CURRENCY, $kind);
         }
     }
 
@@ -99,7 +100,7 @@ final readonly class CreditAgricoleParser implements StatementParser
         $settlements = [];
         foreach ($this->csv->read($file, self::SEPARATOR, self::ENCODING) as $record) {
             if (preg_match('/^Encours débité le (?<date>.+)$/u', trim($record[0]), $matches)) {
-                $settlements[self::settlementKey($this->dates->parse($matches['date']), $this->money->parse($record[1] ?? '')->amount)] = true;
+                $settlements[self::settlementKey($this->dates->parse($matches['date']), $this->money->parse($record[1] ?? '', self::CURRENCY)->amount)] = true;
             }
         }
 
@@ -113,7 +114,7 @@ final readonly class CreditAgricoleParser implements StatementParser
 
     private function amount(string $value): int
     {
-        return '' === trim($value) ? 0 : abs($this->money->parse($value)->amount);
+        return '' === trim($value) ? 0 : abs($this->money->parse($value, self::CURRENCY)->amount);
     }
 
     /**

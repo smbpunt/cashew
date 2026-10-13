@@ -6,7 +6,7 @@ final readonly class Money
 {
     public function __construct(
         /**
-         * In minor units (cents).
+         * In minor units of its currency (cents, or yens).
          */
         public int $amount,
         /**

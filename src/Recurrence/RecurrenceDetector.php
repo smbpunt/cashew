@@ -196,7 +196,7 @@ final readonly class RecurrenceDetector
         $isMember = $byDay = [];
         foreach ($transactions as $i => $transaction) {
             $attached = $transaction->getRecurringSeries();
-            $isMember[$i] = (null !== $series && $attached === $series) || (null === $attached && SeriesAnalyzer::isSimilarAmount($transaction->getAmount(), $typicalAmount));
+            $isMember[$i] = (null !== $series && $attached === $series) || (null === $attached && AmountTolerance::isSimilar($transaction->getAmount(), $typicalAmount, $transaction->getCurrency()));
             $byDay[$transaction->getDate()->format('Y-m-d')][] = $i;
         }
 

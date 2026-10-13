@@ -15,9 +15,6 @@ use App\Enum\Periodicity;
  */
 final readonly class SeriesAnalyzer
 {
-    private const float AMOUNT_TOLERANCE = 0.1;
-    private const int MIN_AMOUNT_TOLERANCE = 100;
-
     /**
      * The occurrences the confidence looks at: the last ones, for an old irregularity not to weigh forever.
      */
@@ -58,9 +55,10 @@ final readonly class SeriesAnalyzer
         }
 
         // From one occurrence to the next: a price rise once doesn't make it unstable
+        $currency = array_first($transactions)->getCurrency();
         $stable = 0;
         for ($i = 1; $i < \count($days); ++$i) {
-            $stable += (int) self::haveSimilarAmounts($recent[$days[$i]], $recent[$days[$i - 1]]);
+            $stable += (int) self::haveSimilarAmounts($recent[$days[$i]], $recent[$days[$i - 1]], $currency);
         }
         $stability = $stable / \count($intervals);
         // Twice only: the same amount, or it may well be a coincidence
@@ -76,14 +74,6 @@ final readonly class SeriesAnalyzer
             (int) round(100 * $regularity * (0.3 + 0.7 * $stability) * (0.7 + 0.3 * $occurrences)),
             new \DateTimeImmutable((string) array_key_last($amountsByDay)),
         );
-    }
-
-    /**
-     * Whether an amount is close enough to another to be the same price: within 10 %, or 1 unit for small amounts.
-     */
-    public static function isSimilarAmount(int $amount, int $reference): bool
-    {
-        return abs($amount - $reference) <= max(self::MIN_AMOUNT_TOLERANCE, (int) round(abs($reference) * self::AMOUNT_TOLERANCE));
     }
 
     /**
@@ -126,11 +116,11 @@ final readonly class SeriesAnalyzer
      * @param list<int> $amounts
      * @param list<int> $others
      */
-    private static function haveSimilarAmounts(array $amounts, array $others): bool
+    private static function haveSimilarAmounts(array $amounts, array $others, string $currency): bool
     {
         foreach ($amounts as $amount) {
             foreach ($others as $other) {
-                if (self::isSimilarAmount($amount, $other)) {
+                if (AmountTolerance::isSimilar($amount, $other, $currency)) {
                     return true;
                 }
             }

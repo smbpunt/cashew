@@ -51,7 +51,7 @@ final readonly class AmountChangeFinder
                 $changed = $transaction->getAmount() !== array_first($lastAmounts);
             } else {
                 // Two lines of the same day: either may be the one it's the next of
-                $changed = !array_any($previous[$previousDay], static fn (int $amount): bool => SeriesAnalyzer::isSimilarAmount($transaction->getAmount(), $amount));
+                $changed = !array_any($previous[$previousDay], static fn (int $amount): bool => AmountTolerance::isSimilar($transaction->getAmount(), $amount, $transaction->getCurrency()));
             }
 
             if ($changed) {

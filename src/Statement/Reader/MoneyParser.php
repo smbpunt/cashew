@@ -3,6 +3,7 @@
 namespace App\Statement\Reader;
 
 use App\Statement\Exception\UnreadableStatementException;
+use Symfony\Component\Intl\Currencies;
 
 /**
  * Reads amounts as banks write them: "-1 234,56 €", "1,234.56", "12,34AU$"...
@@ -27,7 +28,11 @@ final class MoneyParser
         (?<after>[^\d\s,.]*)
     $/ux';
 
-    public function parse(string $value): Money
+    /**
+     * @param string $currency the one of the statement, for the amounts that don't spell theirs out: it tells how many
+     *                         minor units make a major one (100 cents, but 1 yen)
+     */
+    public function parse(string $value, string $currency): Money
     {
         // \s doesn't cover the no-break spaces that group digits in French
         $normalized = trim(str_replace(["\u{00A0}", "\u{202F}"], ' ', $value));
@@ -38,22 +43,30 @@ final class MoneyParser
 
         $negative = \in_array($matches['sign'], ['-', "\u{2212}"], true) || \in_array($matches['sign2'], ['-', "\u{2212}"], true);
         $symbol = $matches['before'].$matches['after'];
+        $spelled = '' === $symbol ? null : $this->currency($symbol, $value);
+        $amount = $this->toMinorUnits($matches['number'], Currencies::getFractionDigits($spelled ?? $currency), $value);
 
-        return new Money(($negative ? -1 : 1) * $this->toMinorUnits($matches['number'], $value), '' === $symbol ? null : $this->currency($symbol, $value));
+        return new Money(($negative ? -1 : 1) * $amount, $spelled);
     }
 
-    private function toMinorUnits(string $number, string $value): int
+    private function toMinorUnits(string $number, int $fractionDigits, string $value): int
     {
         $number = preg_replace('/\s+/', ' ', $number);
 
         // The decimal separator is the last "," or "." when 1 or 2 digits follow it; any other one groups thousands
         if (preg_match('/^(?<integer>.*?)[,.](?<decimals>\d{1,2})$/', $number, $matches)) {
             $integer = $matches['integer'];
-            $decimals = str_pad($matches['decimals'], 2, '0');
+            $decimals = $matches['decimals'];
         } else {
             $integer = $number;
-            $decimals = '00';
+            $decimals = '';
         }
+
+        // "1 234,00 ¥" has no yen cents, but "1 234,50 ¥" isn't an amount in yens
+        if (\strlen(rtrim($decimals, '0')) > $fractionDigits) {
+            throw new UnreadableStatementException('statement.error.not_an_amount', ['value' => $value]);
+        }
+        $decimals = str_pad(substr($decimals, 0, $fractionDigits), $fractionDigits, '0');
 
         if (!preg_match('/^\d{1,3}(?:[ ,.]?\d{3})*$/', $integer)) {
             throw new UnreadableStatementException('statement.error.not_an_amount', ['value' => $value]);
