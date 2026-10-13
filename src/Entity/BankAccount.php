@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: BankAccountRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_BANK_ACCOUNT_EXTERNAL_ID', fields: ['owner', 'bank', 'externalId'])]
-class BankAccount
+class BankAccount implements Owned
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

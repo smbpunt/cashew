@@ -4,7 +4,6 @@ namespace App\Transfer;
 
 use App\Category\TransferCategory;
 use App\Counterparty\CounterpartyNormalizer;
-use App\Entity\Category;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Enum\TransactionKind;
@@ -48,6 +47,7 @@ final readonly class TransferDetector
         private TransactionRepository $transactions,
         private TransferCategory $transferCategory,
         private CounterpartyNormalizer $normalizer,
+        private TransferFiling $filing,
     ) {
     }
 
@@ -84,10 +84,10 @@ final readonly class TransferDetector
                 foreach ([$transaction, $other] as $side) {
                     $paired[spl_object_id($side)] = true;
                     $side->markAsInternalTransfer();
-                    self::file($side, $category);
+                    $this->filing->file($side, $category);
                 }
             } elseif ($this->isWordedAsTransfer($transaction)) {
-                self::file($transaction, $category);
+                $this->filing->file($transaction, $category);
             }
         }
     }
@@ -123,15 +123,5 @@ final readonly class TransferDetector
         $words = $this->normalizer->words($transaction->getLabel());
 
         return array_any(self::PATTERNS, static fn (string $pattern): bool => 1 === preg_match($pattern, $words));
-    }
-
-    /**
-     * Unless the user told what it is already: the rent paid by transfer stays in "Rent", the salary stays a salary.
-     */
-    private static function file(Transaction $transaction, Category $category): void
-    {
-        if (!$transaction->isRecurring() && null === $transaction->getEffectiveCategory()) {
-            $transaction->categorize($category);
-        }
     }
 }

@@ -7,10 +7,10 @@ use App\Entity\Category;
 use App\Entity\RecurringSeries;
 use App\Entity\Transaction;
 use App\Entity\User;
-use App\Enum\CategoryRole;
 use App\Form\SeriesReviewType;
 use App\Repository\TransactionRepository;
 use App\Security\OwnerVoter;
+use App\Transfer\TransferFiling;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormFactoryInterface;
@@ -50,6 +50,7 @@ final class SeriesSuggestion extends AbstractController
         private readonly TransactionRepository $transactions,
         private readonly EntityManagerInterface $entityManager,
         private readonly FormFactoryInterface $formFactory,
+        private readonly TransferFiling $filing,
     ) {
     }
 
@@ -62,13 +63,8 @@ final class SeriesSuggestion extends AbstractController
         /** @var array{name: string, category: ?Category} $data */
         $data = $this->getForm()->getData();
         $this->series->confirm($data['name'], $data['category']);
-        // Filed as transfers on import, they take the category of their series: the rent paid by transfer goes to "Rent"
         if (null !== $data['category']) {
-            foreach ($this->getOccurrences() as $transaction) {
-                if (CategoryRole::Transfers === $transaction->getCategory()?->getRole()) {
-                    $transaction->categorize(null);
-                }
-            }
+            $this->filing->release($this->getOccurrences());
         }
         $this->entityManager->flush();
 
@@ -102,7 +98,7 @@ final class SeriesSuggestion extends AbstractController
      */
     public function getOccurrences(): array
     {
-        return $this->occurrences ??= $this->transactions->findBy(['recurringSeries' => $this->series], ['date' => 'DESC', 'id' => 'DESC']);
+        return $this->occurrences ??= $this->transactions->findOfSeries($this->series);
     }
 
     /**

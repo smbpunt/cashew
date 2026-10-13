@@ -7,9 +7,9 @@ use App\Entity\Category;
 use App\Entity\Counterparty;
 use App\Entity\Transaction;
 use App\Entity\User;
-use App\Enum\CategoryRole;
 use App\Repository\TransactionRepository;
 use App\Security\OwnerVoter;
+use App\Transfer\TransferFiling;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -47,6 +47,7 @@ final class TransactionCategory extends AbstractController
         private readonly CategoryChoices $categories,
         private readonly TransactionRepository $transactions,
         private readonly EntityManagerInterface $entityManager,
+        private readonly TransferFiling $filing,
     ) {
     }
 
@@ -83,8 +84,7 @@ final class TransactionCategory extends AbstractController
 
     /**
      * Its own category gives way to that of its counterparty; so does the one the import filed the others in as
-     * transfers, for the rent paid by transfer to go to "Rent". Not that of the money moved between the user's
-     * accounts: it stays out of the totals.
+     * transfers.
      */
     private function categorizeCounterparty(Counterparty $counterparty, ?Category $category): void
     {
@@ -92,11 +92,7 @@ final class TransactionCategory extends AbstractController
         $this->transaction->categorize(null);
 
         if (null !== $category) {
-            foreach ($this->transactions->findBy(['counterparty' => $counterparty]) as $transaction) {
-                if (CategoryRole::Transfers === $transaction->getCategory()?->getRole() && !$transaction->isInternalTransfer()) {
-                    $transaction->categorize(null);
-                }
-            }
+            $this->filing->release($this->transactions->findBy(['counterparty' => $counterparty]));
         }
     }
 

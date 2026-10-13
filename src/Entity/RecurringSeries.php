@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: RecurringSeriesRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_RECURRING_SERIES_COUNTERPARTY', fields: ['account', 'counterparty', 'reference', 'income'])]
-class RecurringSeries implements Nameable
+class RecurringSeries implements Nameable, Owned
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

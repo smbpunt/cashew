@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'bank_transaction')]
 #[ORM\UniqueConstraint(name: 'UNIQ_BANK_TRANSACTION_FINGERPRINT', fields: ['account', 'fingerprint'])]
 #[ORM\Index(name: 'IDX_BANK_TRANSACTION_DATE', fields: ['account', 'date'])]
-class Transaction
+class Transaction implements Owned
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -85,6 +85,11 @@ class Transaction
     public function getAccount(): BankAccount
     {
         return $this->account;
+    }
+
+    public function getOwner(): User
+    {
+        return $this->account->getOwner();
     }
 
     public function getStatementImport(): ?StatementImport

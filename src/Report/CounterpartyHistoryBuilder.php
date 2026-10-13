@@ -26,7 +26,7 @@ final readonly class CounterpartyHistoryBuilder
             $occurrences = [$transaction];
         }
 
-        $range = $this->transactions->findDateRange($transaction->getAccount()->getOwner());
+        $range = $this->transactions->findDateRange($transaction->getOwner());
         $month = Month::firstDayOf($transaction->getDate());
         $last = max($month, Month::firstDayOf($range[1] ?? $transaction->getDate()));
         $first = Month::firstDayOf(array_last($occurrences)->getDate());

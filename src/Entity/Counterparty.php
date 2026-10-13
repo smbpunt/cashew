@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: CounterpartyRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_COUNTERPARTY_KEY', fields: ['owner', 'key'])]
-class Counterparty implements Nameable
+class Counterparty implements Nameable, Owned
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

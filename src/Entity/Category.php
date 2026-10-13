@@ -19,7 +19,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 #[ORM\UniqueConstraint(name: 'UNIQ_CATEGORY_NAME', fields: ['owner', 'parent', 'name'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_CATEGORY_ROLE', fields: ['owner', 'role'])]
 #[UniqueEntity(fields: ['owner', 'parent', 'name'], message: 'category.name.taken', errorPath: 'name', ignoreNull: false)]
-class Category
+class Category implements Owned
 {
     /**
      * A Lucide icon, as UX Icons names it: "lucide:house".

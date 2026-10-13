@@ -14,7 +14,7 @@ use Symfony\Component\Translation\TranslatableMessage;
  */
 #[ORM\Entity(repositoryClass: StatementImportRepository::class)]
 #[ORM\Index(name: 'IDX_STATEMENT_IMPORT_CHECKSUM', fields: ['owner', 'checksum'])]
-class StatementImport
+class StatementImport implements Owned
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

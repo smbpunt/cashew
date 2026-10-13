@@ -2,18 +2,16 @@
 
 namespace App\Security;
 
-use App\Entity\Category;
-use App\Entity\RecurringSeries;
-use App\Entity\Transaction;
+use App\Entity\Owned;
 use App\Entity\User;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
 /**
- * Grants OWNER on what belongs to the user: their categories, series and transactions.
+ * Grants OWNER on what belongs to the user: their categories, series, transactions...
  *
- * @extends Voter<'OWNER', Category|RecurringSeries|Transaction>
+ * @extends Voter<'OWNER', Owned>
  */
 final class OwnerVoter extends Voter
 {
@@ -21,7 +19,7 @@ final class OwnerVoter extends Voter
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return self::OWNER === $attribute && ($subject instanceof Category || $subject instanceof RecurringSeries || $subject instanceof Transaction);
+        return self::OWNER === $attribute && $subject instanceof Owned;
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
@@ -31,7 +29,7 @@ final class OwnerVoter extends Voter
             return false;
         }
 
-        $owner = $subject instanceof Transaction ? $subject->getAccount()->getOwner() : $subject->getOwner();
+        $owner = $subject->getOwner();
 
         return $owner === $user || $owner->getId() === $user->getId();
     }
