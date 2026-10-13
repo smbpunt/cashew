@@ -1,0 +1,32 @@
+{%- props
+    ## App\Entity\Transaction
+    transaction,
+    ## bool On the page of the transaction: with its date and the periodicity of its series, its category that of its counterparty.
+    onItsPage = false
+-%}
+<dl {{ attributes.defaults({class: 'flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'}) }}>
+    {% for term, value in {
+        'transaction.show.date': onItsPage ? transaction.date|format_date('long'),
+        'transaction.detail.account': transaction.account.label,
+        'transaction.detail.bank': transaction.account.bank.label,
+        'transaction.detail.bank_category': transaction.bankCategory,
+    }|filter(value => value) %}
+        <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
+            <dt class="font-medium">{{ term|trans }}</dt>
+            <dd>{{ value }}</dd>
+        </div>
+    {% endfor %}
+    <twig:TransactionCategory :transaction="transaction" :ofCounterparty="onItsPage" key="transaction-category-{{ transaction.id }}" />
+    {% if transaction.recurring %}
+        <twig:Badge variant="secondary" data-recurring>
+            {{- 'transaction.detail.series'|trans -}}
+            {%- if onItsPage %} · {{ transaction.recurringSeries.periodicity|trans }}{% endif -%}
+        </twig:Badge>
+    {% endif %}
+    {% if transaction.deferredCardPurchase %}
+        <twig:Badge variant="secondary">{{ 'transaction.detail.deferred_card_purchase'|trans }}</twig:Badge>
+    {% endif %}
+    {% if transaction.internalTransfer %}
+        <twig:Badge variant="secondary" data-internal-transfer>{{ 'transaction.detail.internal_transfer'|trans }}</twig:Badge>
+    {% endif %}
+</dl>

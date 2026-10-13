@@ -194,6 +194,11 @@ class Transaction implements Owned
         return TransactionKind::InternalTransfer === $this->kind;
     }
 
+    public function isDeferredCardPurchase(): bool
+    {
+        return TransactionKind::DeferredCardPurchase === $this->kind;
+    }
+
     /**
      * Whether it counts in what the user spent and earned: an internal transfer is listed, but is neither.
      */

@@ -3,11 +3,13 @@
 namespace App\Enum;
 
 use App\Entity\Transaction;
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * How the dashboard sorts the transactions of a month; those that tie, the most recent first.
  */
-enum TransactionSort: string
+enum TransactionSort: string implements TranslatableInterface
 {
     /**
      * The most recent first.
@@ -51,5 +53,10 @@ enum TransactionSort: string
     private static function byName(\Collator $collator): \Closure
     {
         return static fn (Transaction $a, Transaction $b): int => (int) $collator->compare($a->getName(), $b->getName());
+    }
+
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
+    {
+        return $translator->trans('dashboard.sort.'.$this->value, locale: $locale);
     }
 }

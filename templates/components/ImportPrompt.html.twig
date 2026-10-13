@@ -1,0 +1,21 @@
+{%- props
+    ## \DateTimeInterface|null When the next statement can be exported, when the last ones only held the month in progress.
+    waitingUntil = null
+-%}
+{# A page with nothing to show until the user imports their statements #}
+<twig:Card class="mx-auto w-full max-w-lg items-center px-6 py-12 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95">
+    <div class="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        {{ ux_icon('lucide:download', {class: 'size-6', 'aria-hidden': 'true'}) }}
+    </div>
+    <div class="flex flex-col gap-2">
+        <h1 class="text-xl font-semibold tracking-tight">{{ 'import_prompt.title'|trans }}</h1>
+        <p class="text-sm text-balance text-muted-foreground">
+            {% if waitingUntil %}
+                {{ 'import_prompt.waiting_for_month_end'|trans({date: waitingUntil|format_date('long')}) }}
+            {% else %}
+                {{ 'import_prompt.description'|trans }}
+            {% endif %}
+        </p>
+    </div>
+    <twig:Button as="a" size="lg" href="{{ path('app_statement_import') }}">{{ 'import_prompt.import'|trans }}</twig:Button>
+</twig:Card>

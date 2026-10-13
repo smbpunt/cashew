@@ -33,7 +33,7 @@
         <twig:Card:Header>
             <twig:Card:Title><h2>{{ 'category.show.by_month'|trans }}</h2></twig:Card:Title>
             <twig:Card:Description>
-                {{ 'category.show.average'|trans({amount: average|major_units(currency)|format_currency(currency), count: history.months|length}) }}
+                {{ 'category.show.average'|trans({amount: average|money(currency), count: history.months|length}) }}
             </twig:Card:Description>
         </twig:Card:Header>
         <twig:Card:Content>
@@ -61,15 +61,14 @@
             {% endfor %}
         </div>
         {% if history.transactions is empty %}
-            <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'category.show.no_transactions'|trans }}</p>
+            <twig:EmptyState>{{ 'category.show.no_transactions'|trans }}</twig:EmptyState>
         {% else %}
             <ul class="divide-y">
                 {% for transaction in history.transactions %}
-                    {% set label = transaction.name %}
                     <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
                         <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">{{ transaction.date|format_date(pattern: 'd MMM') }}</time>
                         <div class="flex min-w-0 flex-1 flex-col">
-                            <a href="{{ path('app_transaction_show', {id: transaction.id}) }}" class="truncate text-sm font-medium hover:underline" title="{{ label }}">{{ label }}</a>
+                            <a href="{{ path('app_transaction_show', {id: transaction.id}) }}" class="truncate text-sm font-medium hover:underline" title="{{ transaction.oneLineLabel }}">{{ transaction.name }}</a>
                             {% if transaction.effectiveCategory != category %}
                                 <p class="text-xs text-muted-foreground">{{ transaction.effectiveCategory.name }}</p>
                             {% endif %}

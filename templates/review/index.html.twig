@@ -40,7 +40,7 @@
 {% if amount_changes is not empty %}
     <section aria-labelledby="amount-changes">
         <twig:Alert>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            {{ ux_icon('lucide:triangle-alert', {'aria-hidden': 'true'}) }}
             <twig:Alert:Title><h2 id="amount-changes">{{ 'review.amount_changes.title'|trans({count: amount_changes|length}) }}</h2></twig:Alert:Title>
             <twig:Alert:Description>
                 <ul class="flex flex-col gap-1">
@@ -50,8 +50,8 @@
                             {{ 'review.amount_changes.item'|trans({
                                 series: transaction.recurringSeries.name,
                                 date: transaction.date|format_date('medium'),
-                                amount: transaction.amount|abs|major_units(transaction.currency)|format_currency(transaction.currency),
-                                previous: change.previousAmount|abs|major_units(transaction.currency)|format_currency(transaction.currency),
+                                amount: transaction.amount|abs|money(transaction.currency),
+                                previous: change.previousAmount|abs|money(transaction.currency),
                                 previous_date: change.previousDate|format_date('medium'),
                             }) }}
                         </li>

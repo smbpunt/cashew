@@ -31,9 +31,6 @@ theme:
 
 dashboard:
     title: Dashboard
-    months: Months
-    previous_month: Previous month
-    next_month: Next month
     income: Income
     spending: Spending
     balance: Balance
@@ -50,18 +47,6 @@ dashboard:
         label: Display
         simple: Simple
         detailed: Detailed
-    detail:
-        account: Account
-        bank: Bank
-        category: Category
-        bank_category: Bank category
-        series: Recurring
-        no_category: None
-        from_series: '{category} (recurring)'
-        from_counterparty: '{category} (counterparty)'
-        for_counterparty: for all the transactions of the counterparty
-        deferred_card_purchase: Deferred debit card
-        internal_transfer: Internal transfer
     categories:
         title: By category
         fixed_charges: 'Fixed charges:'
@@ -69,17 +54,9 @@ dashboard:
     importing:
         title: '{count, plural, one {Importing your statement…} other {Importing your # statements…}}'
         description: 'This page updates itself once it''s done. You can also leave: your transactions will be waiting for you.'
-    empty:
-        title: No data yet
-        description: Import the statements of your bank accounts to see your income and spending.
-        waiting_for_month_end: 'Your statements only held transactions of the month in progress: export a new statement once it''s over, from {date}.'
-        import: Import statements
 
 calendar:
     title: Calendar
-    months: Months
-    previous_month: Previous month
-    next_month: Next month
     filter:
         label: Show
         recurring: Recurring
@@ -106,6 +83,17 @@ calendar:
         keep: Still active
         resume: Resume
 
+month_nav:
+    label: Months
+    previous: Previous month
+    next: Next month
+
+import_prompt:
+    title: No data yet
+    description: Import the statements of your bank accounts to see your income and spending.
+    waiting_for_month_end: 'Your statements only held transactions of the month in progress: export a new statement once it''s over, from {date}.'
+    import: Import statements
+
 transaction:
     show:
         back: '← {month}'
@@ -130,6 +118,18 @@ transaction:
         cancel: Cancel
         counterparty_scope: '{count, plural, one {For this transaction of the counterparty, and those to come. Blank, it goes back to its label.} other {For the # transactions of the counterparty that aren’t recurring, and those to come. Blank, they go back to their label.}}'
         series_scope: '{count, plural, one {For this transaction of the series, and those to come. Blank, the series takes the name of the counterparty.} other {For the # transactions of the series, and those to come. Blank, the series takes the name of the counterparty.}}'
+    detail:
+        account: Account
+        bank: Bank
+        category: Category
+        bank_category: Bank category
+        series: Recurring
+        no_category: None
+        from_series: '{category} (recurring)'
+        from_counterparty: '{category} (counterparty)'
+        for_counterparty: for all the transactions of the counterparty
+        deferred_card_purchase: Deferred debit card
+        internal_transfer: Internal transfer
 
 locale:
     switcher: Language

@@ -2,10 +2,13 @@
 
 namespace App\Enum;
 
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
 /**
  * How often a recurring series comes back.
  */
-enum Periodicity: string
+enum Periodicity: string implements TranslatableInterface
 {
     case Weekly = 'weekly';
     case Monthly = 'monthly';
@@ -110,5 +113,10 @@ enum Periodicity: string
             self::Semiannual => [170, 195],
             self::Yearly => [350, 380],
         };
+    }
+
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
+    {
+        return $translator->trans('recurrence.periodicity.'.$this->value, locale: $locale);
     }
 }

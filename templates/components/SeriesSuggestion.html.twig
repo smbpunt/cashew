@@ -5,7 +5,7 @@
         <div class="flex min-w-0 flex-col gap-1">
             <p class="font-medium break-words">{{ series.name }}</p>
             <p class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <twig:Badge variant="secondary">{{ ('recurrence.periodicity.' ~ series.periodicity.value)|trans }}</twig:Badge>
+                <twig:Badge variant="secondary">{{ series.periodicity|trans }}</twig:Badge>
                 <twig:Badge variant="outline">{{ (series.income ? 'recurrence.income' : 'recurrence.spending')|trans }}</twig:Badge>
                 <span>{{ series.account.label }}</span>
                 <span>{{ 'review.series.confidence'|trans({confidence: series.confidence / 100}) }}</span>

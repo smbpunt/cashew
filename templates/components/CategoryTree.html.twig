@@ -1,7 +1,7 @@
 {% set categories = this.categories %}
 <div {{ attributes.defaults({class: 'block'}) }}>
     {% if categories is empty %}
-        <p class="px-6 py-10 text-center text-sm text-muted-foreground" data-empty>{{ 'category.empty'|trans }}</p>
+        <twig:EmptyState data-empty>{{ 'category.empty'|trans }}</twig:EmptyState>
     {% else %}
         <ul class="divide-y">
             {% for category in categories %}

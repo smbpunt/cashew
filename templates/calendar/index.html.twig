@@ -9,23 +9,7 @@
     {% set query = {month: calendar.month.key, show: calendar.filter.value} %}
 
     <section aria-labelledby="month" class="flex flex-col gap-6">
-        <div class="flex items-center justify-between gap-4">
-            <h1 id="month" class="text-2xl font-bold tracking-tight">{{ month_name }}</h1>
-
-            <nav class="flex items-center gap-1" aria-label="{{ 'calendar.months'|trans }}">
-                {% for link in [
-                    {month: calendar.previousMonth, label: 'calendar.previous_month', icon: 'm15 18-6-6 6-6', rel: 'prev'},
-                    {month: calendar.nextMonth, label: 'calendar.next_month', icon: 'm9 18 6-6-6-6', rel: 'next'},
-                ] %}
-                    {% set icon %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ link.icon }}"/></svg>{% endset %}
-                    {% if link.month %}
-                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_calendar', query|merge({month: link.month.key})) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
-                    {% else %}
-                        <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label|trans }}">{{ icon }}</twig:Button>
-                    {% endif %}
-                {% endfor %}
-            </nav>
-        </div>
+        <twig:MonthNav :month="calendar.month" :previous="calendar.previousMonth" :next="calendar.nextMonth" route="app_calendar" :query="query" />
 
         <div class="flex flex-wrap items-end justify-between gap-4">
             <dl class="flex flex-wrap gap-x-8 gap-y-2">
@@ -36,7 +20,7 @@
                             <twig:Money :amount="-totals.total" :currency="totals.currency" class="text-2xl font-semibold tracking-tight" data-total />
                             {% if totals.expected != 0 %}
                                 <span class="text-sm text-muted-foreground" data-expected-total>
-                                    {{- 'calendar.expected_total'|trans({amount: (-totals.expected)|major_units(totals.currency)|format_currency(totals.currency)}) -}}
+                                    {{- 'calendar.expected_total'|trans({amount: (-totals.expected)|money(totals.currency)}) -}}
                                 </span>
                             {% endif %}
                         </dd>
@@ -44,19 +28,13 @@
                 {% endfor %}
             </dl>
 
-            <div role="group" aria-label="{{ 'calendar.filter.label'|trans }}" class="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
-                {% for option in enum('App\\Enum\\CalendarFilter').cases() %}
-                    <twig:Button
-                        as="a"
-                        variant="ghost"
-                        size="xs"
-                        href="{{ path('app_calendar', query|merge({show: option.value})) }}"
-                        aria-current="{{ option == calendar.filter ? 'true' : 'false' }}"
-                        class="text-muted-foreground hover:bg-background/60 aria-[current=true]:bg-background aria-[current=true]:text-foreground aria-[current=true]:shadow-sm"
-                        data-filter="{{ option.value }}"
-                    >{{ ('calendar.filter.' ~ option.value)|trans }}</twig:Button>
-                {% endfor %}
-            </div>
+            {% set filter_options = enum('App\\Enum\\CalendarFilter').cases()|map(option => {
+                value: option.value,
+                label: option|trans,
+                href: path('app_calendar', query|merge({show: option.value})),
+                current: option == calendar.filter,
+            }) %}
+            <twig:ToggleGroup name="filter" label="{{ 'calendar.filter.label'|trans }}" :options="filter_options" />
         </div>
 
         <twig:Card class="gap-0 overflow-hidden py-0">
@@ -123,7 +101,7 @@
                 <h2 class="font-semibold">{{ 'calendar.upcoming'|trans }}</h2>
             </div>
             {% if calendar.entries is empty %}
-                <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ ('calendar.empty.' ~ calendar.filter.value)|trans({month: month_name}) }}</p>
+                <twig:EmptyState>{{ ('calendar.empty.' ~ calendar.filter.value)|trans({month: month_name}) }}</twig:EmptyState>
             {% else %}
                 <ul class="divide-y" data-entries>
                     {% for entry in calendar.entries %}
@@ -163,7 +141,7 @@
                             <div class="flex min-w-0 flex-1 flex-col">
                                 <span class="truncate text-sm font-medium">{{ series.name }}</span>
                                 <span class="text-xs text-muted-foreground">
-                                    {{ ('recurrence.periodicity.' ~ series.periodicity.value)|trans }} ·
+                                    {{ series.periodicity|trans }} ·
                                     {{ 'calendar.to_check.since'|trans({date: series.lastSeenOn|format_date('long')}) }}
                                 </span>
                             </div>
@@ -182,7 +160,7 @@
             <details class="group rounded-xl border bg-card text-card-foreground" data-ended>
                 <summary class="flex cursor-pointer items-center justify-between gap-4 px-4 py-3 text-sm font-medium text-muted-foreground select-none sm:px-6">
                     {{ 'calendar.ended.title'|trans({count: calendar.ended|length}) }}
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-4 transition-transform group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+                    {{ ux_icon('lucide:chevron-down', {class: 'size-4 transition-transform group-open:rotate-180', 'aria-hidden': 'true'}) }}
                 </summary>
                 <ul class="divide-y border-t">
                     {% for series in calendar.ended %}
@@ -201,12 +179,6 @@
         {% endif %}
     </section>
 {% else %}
-    <twig:Card class="mx-auto w-full max-w-lg items-center px-6 py-12 text-center">
-        <div class="flex flex-col gap-2">
-            <h1 class="text-xl font-semibold tracking-tight">{{ 'dashboard.empty.title'|trans }}</h1>
-            <p class="text-sm text-balance text-muted-foreground">{{ 'dashboard.empty.description'|trans }}</p>
-        </div>
-        <twig:Button as="a" size="lg" href="{{ path('app_statement_import') }}">{{ 'dashboard.empty.import'|trans }}</twig:Button>
-    </twig:Card>
+    <twig:ImportPrompt />
 {% endif %}
 {% endblock %}

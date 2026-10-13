@@ -1,0 +1,30 @@
+{%- props
+    ## App\Time\Month The month of the page, its title.
+    month,
+    ## App\Time\Month|null The one before; a disabled button without it.
+    previous,
+    ## App\Time\Month|null The one after; a disabled button without it.
+    next,
+    ## string The route of the page, the month in its query.
+    route,
+    ## array The rest of its query.
+    query = {}
+-%}
+<div {{ attributes.defaults({class: 'flex items-center justify-between gap-4'}) }}>
+    <h1 id="month" class="text-2xl font-bold tracking-tight">{{ month|month_name }}</h1>
+
+    <nav class="flex items-center gap-1" aria-label="{{ 'month_nav.label'|trans }}">
+        {% for link in [
+            {month: previous, label: 'month_nav.previous'|trans, icon: 'lucide:chevron-left', rel: 'prev'},
+            {month: next, label: 'month_nav.next'|trans, icon: 'lucide:chevron-right', rel: 'next'},
+        ] %}
+            {% if link.month %}
+                <twig:Button as="a" variant="outline" size="icon" href="{{ path(route, query|merge({month: link.month.key})) }}" rel="{{ link.rel }}" aria-label="{{ link.label }}" title="{{ link.label }}">
+                    {{- ux_icon(link.icon, {'aria-hidden': 'true'}) -}}
+                </twig:Button>
+            {% else %}
+                <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label }}">{{ ux_icon(link.icon, {'aria-hidden': 'true'}) }}</twig:Button>
+            {% endif %}
+        {% endfor %}
+    </nav>
+</div>

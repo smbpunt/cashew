@@ -1,18 +1,18 @@
 {% set series_category = transaction.seriesCategory %}
 {% set counterparty_category = ofCounterparty ? null : transaction.counterparty.category ?? null %}
 <div {{ attributes.defaults({class: 'flex gap-1'}) }} data-detail="category">
-    <label for="transaction-category-{{ transaction.id }}" class="font-medium">{{ 'dashboard.detail.category'|trans }}</label>
+    <label for="transaction-category-{{ transaction.id }}" class="font-medium">{{ 'transaction.detail.category'|trans }}</label>
     <select id="transaction-category-{{ transaction.id }}" data-model="categoryId"
         class="-my-0.5 max-w-72 rounded-md border border-transparent bg-transparent px-1 text-xs hover:border-input focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none [&>option]:bg-background"
     >
         {# The one it inherits, unless it has its own #}
         <option value="">
             {%- if series_category -%}
-                {{ 'dashboard.detail.from_series'|trans({category: series_category.path}) }}
+                {{ 'transaction.detail.from_series'|trans({category: series_category.path}) }}
             {%- elseif counterparty_category -%}
-                {{ 'dashboard.detail.from_counterparty'|trans({category: counterparty_category.path}) }}
+                {{ 'transaction.detail.from_counterparty'|trans({category: counterparty_category.path}) }}
             {%- else -%}
-                {{ 'dashboard.detail.no_category'|trans }}
+                {{ 'transaction.detail.no_category'|trans }}
             {%- endif -%}
         </option>
         {% for category in this.choices %}
@@ -20,6 +20,6 @@
         {% endfor %}
     </select>
     {% if ofCounterparty %}
-        <span data-category-scope>{{ 'dashboard.detail.for_counterparty'|trans }}</span>
+        <span data-category-scope>{{ 'transaction.detail.for_counterparty'|trans }}</span>
     {% endif %}
 </div>

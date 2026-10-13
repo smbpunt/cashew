@@ -8,5 +8,5 @@
 -%}
 <span {{ attributes.defaults({class: html_classes('tabular-nums whitespace-nowrap', {'text-success': signed and amount > 0})}) }}>
     {{- signed and amount > 0 ? '+' -}}
-    {{- amount|major_units(currency)|format_currency(currency) -}}
+    {{- amount|money(currency) -}}
 </span>

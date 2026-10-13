@@ -11,23 +11,7 @@
     {% set month_name = report.month|month_name %}
 
     <section aria-labelledby="month" class="flex flex-col gap-6">
-        <div class="flex items-center justify-between gap-4">
-            <h1 id="month" class="text-2xl font-bold tracking-tight">{{ month_name }}</h1>
-
-            <nav class="flex items-center gap-1" aria-label="{{ 'dashboard.months'|trans }}">
-                {% for link in [
-                    {month: report.previousMonth, label: 'dashboard.previous_month', icon: 'm15 18-6-6 6-6', rel: 'prev'},
-                    {month: report.nextMonth, label: 'dashboard.next_month', icon: 'm9 18 6-6-6-6', rel: 'next'},
-                ] %}
-                    {% set icon %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ link.icon }}"/></svg>{% endset %}
-                    {% if link.month %}
-                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_dashboard', {month: link.month.key}) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
-                    {% else %}
-                        <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label|trans }}">{{ icon }}</twig:Button>
-                    {% endif %}
-                {% endfor %}
-            </nav>
-        </div>
+        <twig:MonthNav :month="report.month" :previous="report.previousMonth" :next="report.nextMonth" route="app_dashboard" />
 
         {% for totals in report.totals %}
             <dl class="grid gap-4 sm:grid-cols-3" data-currency="{{ totals.currency }}">
@@ -61,7 +45,7 @@
                     {% for total in breakdown.categories %}
                         <li class="flex flex-col gap-1 px-4 py-2.5 sm:px-6" data-category="{{ total.category.name }}">
                             <div class="flex items-center justify-between gap-4">
-                                <a href="{{ path('app_category_show', {id: total.category.id, month: report.month|date('Y-m')}) }}" class="flex items-center gap-2 text-sm font-medium hover:underline">
+                                <a href="{{ path('app_category_show', {id: total.category.id, month: report.month.key}) }}" class="flex items-center gap-2 text-sm font-medium hover:underline">
                                     <twig:CategoryIcon :category="total.category" />
                                     {{- total.category.name -}}
                                 </a>
@@ -71,7 +55,7 @@
                                 <ul class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                                     {% for child in total.children %}
                                         <li class="flex gap-1" data-category="{{ child.category.name }}">
-                                            <a href="{{ path('app_category_show', {id: child.category.id, month: report.month|date('Y-m')}) }}" class="hover:underline">{{ child.category.name }}</a>
+                                            <a href="{{ path('app_category_show', {id: child.category.id, month: report.month.key}) }}" class="hover:underline">{{ child.category.name }}</a>
                                             <twig:Money :amount="child.amount" :currency="breakdown.currency" signed />
                                         </li>
                                     {% endfor %}
@@ -92,8 +76,9 @@
         {# The list changes within the frame: only it reloads, and the page keeps its scroll #}
         <turbo-frame id="transactions">
             {# The mode and the sort are remembered: what's shown isn't, and goes along #}
-            {% set query = {month: report.month.key, show: list.show.value == 'all' ? null : list.show.value} %}
-            {% set unidentified_only = list.show.value == 'unidentified' %}
+            {% set filter = enum('App\\Enum\\TransactionFilter') %}
+            {% set query = {month: report.month.key, show: list.show is same as filter.All ? null : list.show.value} %}
+            {% set unidentified_only = list.show is same as filter.Unidentified %}
             <twig:Card class="gap-0 py-0">
                 <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3 sm:px-6">
                     <div class="flex items-center gap-2">
@@ -114,7 +99,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         {% set sort_options = enum('App\\Enum\\TransactionSort').cases()|map(option => {
                             value: option.value,
-                            label: ('dashboard.sort.' ~ option.value)|trans,
+                            label: option|trans,
                             href: path('app_dashboard', query|merge({sort: option.value})),
                             current: option == list.sort,
                         }) %}
@@ -122,7 +107,7 @@
 
                         {% set mode_options = enum('App\\Enum\\TransactionListMode').cases()|map(option => {
                             value: option.value,
-                            label: ('dashboard.mode.' ~ option.value)|trans,
+                            label: option|trans,
                             href: path('app_dashboard', query|merge({mode: option.value})),
                             current: option == list.mode,
                         }) %}
@@ -131,10 +116,10 @@
                 </div>
 
                 {% if transactions is empty %}
-                    <p class="px-6 py-10 text-center text-sm text-muted-foreground" data-empty>
+                    <twig:EmptyState data-empty>
                         {{- (unidentified_only ? 'dashboard.all_identified' : 'dashboard.no_transactions')|trans({month: month_name}) -}}
-                    </p>
-                {% elseif list.mode.value == 'detailed' %}
+                    </twig:EmptyState>
+                {% elseif list.mode is same as enum('App\\Enum\\TransactionListMode').Detailed %}
                     <ul class="divide-y">
                         {% for transaction in transactions %}
                             {% set label = transaction.label|split("\n") %}
@@ -153,28 +138,7 @@
                                             <p class="text-xs break-words text-muted-foreground">{{ line }}</p>
                                         {% endfor %}
                                     </div>
-                                    <dl class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                        {% for term, value in {
-                                            'dashboard.detail.account': transaction.account.label,
-                                            'dashboard.detail.bank': transaction.account.bank.label,
-                                            'dashboard.detail.bank_category': transaction.bankCategory,
-                                        }|filter(value => value) %}
-                                            <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
-                                                <dt class="font-medium">{{ term|trans }}</dt>
-                                                <dd>{{ value }}</dd>
-                                            </div>
-                                        {% endfor %}
-                                        <twig:TransactionCategory :transaction="transaction" key="transaction-category-{{ transaction.id }}" />
-                                        {% if transaction.recurring %}
-                                            <twig:Badge variant="secondary" data-recurring>{{ 'dashboard.detail.series'|trans }}</twig:Badge>
-                                        {% endif %}
-                                        {% if transaction.kind.value == 'deferred_card_purchase' %}
-                                            <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
-                                        {% endif %}
-                                        {% if transaction.internalTransfer %}
-                                            <twig:Badge variant="secondary" data-internal-transfer>{{ 'dashboard.detail.internal_transfer'|trans }}</twig:Badge>
-                                        {% endif %}
-                                    </dl>
+                                    <twig:TransactionDetails :transaction="transaction" />
                                 </div>
                                 <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
                             </li>
@@ -199,21 +163,6 @@
         </turbo-frame>
     </section>
 {% elseif not importing %}
-    <twig:Card class="mx-auto w-full max-w-lg items-center px-6 py-12 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95">
-        <div class="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-6"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
-        </div>
-        <div class="flex flex-col gap-2">
-            <h1 class="text-xl font-semibold tracking-tight">{{ 'dashboard.empty.title'|trans }}</h1>
-            <p class="text-sm text-balance text-muted-foreground">
-                {% if waiting_for_month_end %}
-                    {{ 'dashboard.empty.waiting_for_month_end'|trans({date: next_import_date|format_date('long')}) }}
-                {% else %}
-                    {{ 'dashboard.empty.description'|trans }}
-                {% endif %}
-            </p>
-        </div>
-        <twig:Button as="a" size="lg" href="{{ path('app_statement_import') }}">{{ 'dashboard.empty.import'|trans }}</twig:Button>
-    </twig:Card>
+    <twig:ImportPrompt :waitingUntil="waiting_for_month_end ? next_import_date : null" />
 {% endif %}
 {% endblock %}

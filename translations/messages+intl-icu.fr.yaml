@@ -31,9 +31,6 @@ theme:
 
 dashboard:
     title: Tableau de bord
-    months: Mois
-    previous_month: Mois précédent
-    next_month: Mois suivant
     income: Entrées
     spending: Sorties
     balance: Solde
@@ -50,18 +47,6 @@ dashboard:
         label: Affichage
         simple: Simple
         detailed: Détaillé
-    detail:
-        account: Compte
-        bank: Banque
-        category: Catégorie
-        bank_category: Catégorie de la banque
-        series: Récurrent
-        no_category: Aucune
-        from_series: '{category} (récurrent)'
-        from_counterparty: '{category} (interlocuteur)'
-        for_counterparty: pour toutes les opérations de l’interlocuteur
-        deferred_card_purchase: Carte à débit différé
-        internal_transfer: Virement interne
     categories:
         title: Par catégorie
         fixed_charges: 'Charges fixes :'
@@ -69,17 +54,9 @@ dashboard:
     importing:
         title: '{count, plural, one {Import de votre relevé en cours…} other {Import de vos # relevés en cours…}}'
         description: 'Cette page se mettra à jour toute seule une fois l’import terminé. Vous pouvez aussi la quitter : vos transactions vous attendront.'
-    empty:
-        title: Aucune donnée pour l’instant
-        description: Importez les relevés de vos comptes bancaires pour voir vos entrées et vos sorties d’argent.
-        waiting_for_month_end: 'Vos relevés ne contenaient que des transactions du mois en cours : exportez un nouveau relevé une fois le mois terminé, à partir du {date}.'
-        import: Importer des relevés
 
 calendar:
     title: Calendrier
-    months: Mois
-    previous_month: Mois précédent
-    next_month: Mois suivant
     filter:
         label: Afficher
         recurring: Récurrentes
@@ -106,6 +83,17 @@ calendar:
         keep: Toujours actif
         resume: Réactiver
 
+month_nav:
+    label: Mois
+    previous: Mois précédent
+    next: Mois suivant
+
+import_prompt:
+    title: Aucune donnée pour l’instant
+    description: Importez les relevés de vos comptes bancaires pour voir vos entrées et vos sorties d’argent.
+    waiting_for_month_end: 'Vos relevés ne contenaient que des transactions du mois en cours : exportez un nouveau relevé une fois le mois terminé, à partir du {date}.'
+    import: Importer des relevés
+
 transaction:
     show:
         back: '← {month}'
@@ -130,6 +118,18 @@ transaction:
         cancel: Annuler
         counterparty_scope: '{count, plural, one {Pour cette opération de l’interlocuteur, et celles à venir. Vide, elle reprend son libellé.} other {Pour les # opérations non récurrentes de l’interlocuteur, et celles à venir. Vide, elles reprennent leur libellé.}}'
         series_scope: '{count, plural, one {Pour cette opération de la série, et celles à venir. Vide, la série reprend le nom de l’interlocuteur.} other {Pour les # opérations de la série, et celles à venir. Vide, la série reprend le nom de l’interlocuteur.}}'
+    detail:
+        account: Compte
+        bank: Banque
+        category: Catégorie
+        bank_category: Catégorie de la banque
+        series: Récurrent
+        no_category: Aucune
+        from_series: '{category} (récurrent)'
+        from_counterparty: '{category} (interlocuteur)'
+        for_counterparty: pour toutes les opérations de l’interlocuteur
+        deferred_card_purchase: Carte à débit différé
+        internal_transfer: Virement interne
 
 locale:
     switcher: Langue

@@ -7,7 +7,7 @@
         </div>
 
         {% if series is empty %}
-            <p class="px-6 py-10 text-center text-sm text-muted-foreground" data-empty>{{ 'review.suggestions.empty'|trans }}</p>
+            <twig:EmptyState data-empty>{{ 'review.suggestions.empty'|trans }}</twig:EmptyState>
         {% else %}
             <ul class="divide-y">
                 {% for one in series %}

@@ -16,29 +16,7 @@
         <twig:Money :amount="transaction.amount" :currency="currency" signed class="text-2xl font-semibold tracking-tight" />
     </div>
 
-    <dl class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        {% for term, value in {
-            'transaction.show.date': transaction.date|format_date('long'),
-            'dashboard.detail.account': transaction.account.label,
-            'dashboard.detail.bank': transaction.account.bank.label,
-            'dashboard.detail.bank_category': transaction.bankCategory,
-        }|filter(value => value) %}
-            <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
-                <dt class="font-medium">{{ term|trans }}</dt>
-                <dd>{{ value }}</dd>
-            </div>
-        {% endfor %}
-        <twig:TransactionCategory :transaction="transaction" ofCounterparty key="transaction-category-{{ transaction.id }}" />
-        {% if transaction.recurring %}
-            <twig:Badge variant="secondary" data-recurring>{{ 'dashboard.detail.series'|trans }} · {{ ('recurrence.periodicity.' ~ transaction.recurringSeries.periodicity.value)|trans }}</twig:Badge>
-        {% endif %}
-        {% if transaction.kind.value == 'deferred_card_purchase' %}
-            <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
-        {% endif %}
-        {% if transaction.internalTransfer %}
-            <twig:Badge variant="secondary" data-internal-transfer>{{ 'dashboard.detail.internal_transfer'|trans }}</twig:Badge>
-        {% endif %}
-    </dl>
+    <twig:TransactionDetails :transaction="transaction" onItsPage />
 </div>
 
 {% if history.count == 1 %}
@@ -47,9 +25,9 @@
     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {% for tile in [
             {stat: 'total', amount: history.total, note: 'transaction.show.count'|trans({count: history.count})},
-            {stat: 'average', amount: history.average, note: history.periodMonths > 1 ? 'transaction.show.monthly_average'|trans({amount: history.monthlyAverage|major_units(currency)|format_currency(currency)})},
+            {stat: 'average', amount: history.average, note: history.periodMonths > 1 ? 'transaction.show.monthly_average'|trans({amount: history.monthlyAverage|money(currency)})},
             {stat: 'period', value: 'transaction.show.since'|trans({date: history.first.date|format_date('medium')}), note: 'transaction.show.period_months'|trans({count: history.periodMonths, last: history.last.date|format_date('medium')})},
-            {stat: 'range', value: 'transaction.show.range_from_to'|trans({smallest: history.smallest.amount|major_units(currency)|format_currency(currency), largest: history.largest.amount|major_units(currency)|format_currency(currency)})},
+            {stat: 'range', value: 'transaction.show.range_from_to'|trans({smallest: history.smallest.amount|money(currency), largest: history.largest.amount|money(currency)})},
         ] %}
             <twig:Card class="gap-1 px-6 py-5" data-stat="{{ tile.stat }}">
                 <dt class="text-sm text-muted-foreground">{{ ('transaction.show.' ~ tile.stat)|trans }}</dt>
@@ -70,7 +48,7 @@
     <twig:Card>
         <twig:Card:Header>
             <twig:Card:Title><h2>{{ 'transaction.show.by_month'|trans }}</h2></twig:Card:Title>
-            <twig:Card:Description>{{ 'transaction.show.by_month_average'|trans({amount: history.monthlyAverage|major_units(currency)|format_currency(currency)}) }}</twig:Card:Description>
+            <twig:Card:Description>{{ 'transaction.show.by_month_average'|trans({amount: history.monthlyAverage|money(currency)}) }}</twig:Card:Description>
         </twig:Card:Header>
         <twig:Card:Content>
             <twig:MonthlyBars

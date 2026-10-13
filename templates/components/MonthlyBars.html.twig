@@ -27,7 +27,7 @@
         {% set key = month.key %}
         {% set amount = amounts[key] %}
         {% set current = month.equals(selected) %}
-        {% set title = month|month_name ~ ' : ' ~ amount|major_units(currency)|format_currency(currency) %}
+        {% set title = month|month_name ~ ' : ' ~ amount|money(currency) %}
         {% set tag = route ? 'a' : 'div' %}
         <{{ tag }} role="listitem" {% if route %}href="{{ path(route, params|merge({month: key})) }}" {% else %}tabindex="0" {% endif %}
             class="group relative flex flex-1 items-end justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
