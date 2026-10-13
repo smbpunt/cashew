@@ -39,7 +39,7 @@ final readonly class MonthlyReportBuilder
         }
 
         $transactions = $this->transactions->findOfMonth($owner, $month);
-        $counted = array_values(array_filter($transactions, static fn (Transaction $transaction): bool => !$transaction->isInternalTransfer()));
+        $counted = array_values(array_filter($transactions, static fn (Transaction $transaction): bool => $transaction->countsInTotals()));
 
         $totals = [];
         foreach ($counted as $transaction) {

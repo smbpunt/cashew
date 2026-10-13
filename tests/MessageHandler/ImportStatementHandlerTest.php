@@ -59,7 +59,8 @@ final class ImportStatementHandlerTest extends KernelTestCase
 
         self::assertSame([
             TransactionKind::DeferredCardSettlement->value => 1,
-            TransactionKind::Regular->value => 4,
+            TransactionKind::Regular->value => 3,
+            TransactionKind::CardSettlement->value => 1,
             TransactionKind::DeferredCardPurchase->value => 2,
         ], $this->countKinds());
     }
@@ -120,14 +121,15 @@ final class ImportStatementHandlerTest extends KernelTestCase
         $full = (string) file_get_contents(self::FIXTURES.'credit_agricole.csv');
         // The account's transactions only: the card statement debited on September 30th is missing
         $this->uploadAndImport(contents: strstr($full, 'MONSIEUR JEAN DUPONT - Titulaire', true) ?: throw new \LogicException('The fixture changed.'));
-        self::assertSame([TransactionKind::Regular->value => 5], $this->countKinds());
+        self::assertSame([TransactionKind::CardSettlement->value => 2, TransactionKind::Regular->value => 3], $this->countKinds());
 
         $import = $this->uploadAndImport(contents: $full);
 
         self::assertSame([2, 5], [$import->getImportedCount(), $import->getSkippedCount()]);
         self::assertSame([
             TransactionKind::DeferredCardSettlement->value => 1,
-            TransactionKind::Regular->value => 4,
+            TransactionKind::Regular->value => 3,
+            TransactionKind::CardSettlement->value => 1,
             TransactionKind::DeferredCardPurchase->value => 2,
         ], $this->countKinds());
     }

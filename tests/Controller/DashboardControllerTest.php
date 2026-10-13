@@ -446,7 +446,7 @@ final class DashboardControllerTest extends WebTestCase
         $someoneElses = $this->createAccount($this->createUser('bob'), Bank::Revolut, 'Personal (EUR)', 'Personal');
 
         foreach ([
-            [$bank, '2026-08-31', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000, TransactionKind::Regular, null],
+            [$bank, '2026-08-31', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000, TransactionKind::CardSettlement, null],
             [$bank, '2026-09-02', 'BOULANGERIE DU PORT', -1240, TransactionKind::DeferredCardPurchase, null],
             [$revolut, '2026-09-10', 'Cinéma', -1500, TransactionKind::Regular, 'Leisure'],
             [$bank, '2026-09-15', "Prélèvement\nFREE MOBILE", -1999, TransactionKind::Regular, null],

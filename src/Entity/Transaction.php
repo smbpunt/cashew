@@ -189,6 +189,14 @@ class Transaction
         return TransactionKind::InternalTransfer === $this->kind;
     }
 
+    /**
+     * Whether it counts in what the user spent and earned: an internal transfer is listed, but is neither.
+     */
+    public function countsInTotals(): bool
+    {
+        return $this->kind->countsInTotals();
+    }
+
     public function getBankCategory(): ?string
     {
         return $this->bankCategory;

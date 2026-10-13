@@ -8,6 +8,7 @@ use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Periodicity;
 use App\Enum\SeriesStatus;
+use App\Enum\TransactionKind;
 use App\Recurrence\RecurrenceDetector;
 use App\Tests\EntityFactoryTrait;
 use Doctrine\ORM\EntityManagerInterface;
@@ -118,9 +119,9 @@ final class RecurrenceDetectorTest extends KernelTestCase
 
     public function testTheMonthlyDebitOfADeferredDebitCardIsNotOne(): void
     {
-        // Imported as regular, without the card statement
+        // Imported without the card statement
         foreach (['06', '07', '08', '09'] as $month) {
-            $this->add("2026-$month-30", "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000);
+            $this->createTransaction($this->account, "2026-$month-30", "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000, TransactionKind::CardSettlement);
         }
 
         self::assertSame([], $this->detect());

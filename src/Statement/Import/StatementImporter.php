@@ -65,8 +65,8 @@ final readonly class StatementImporter
             $known[$externalId] ??= $this->knownFingerprints($account);
 
             if (isset($known[$externalId][$fingerprint])) {
-                // The kind isn't part of the fingerprint: a settlement may have been imported as a regular debit,
-                // from a statement without its card statement
+                // The kind isn't part of the fingerprint: a settlement may have been imported on its own, from a
+                // statement without its card statement
                 if (TransactionKind::DeferredCardSettlement === $parsed->kind) {
                     $this->transactions->findOneBy(['account' => $account, 'fingerprint' => $fingerprint])?->markAsDeferredCardSettlement();
                 }

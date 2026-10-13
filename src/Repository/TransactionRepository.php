@@ -70,7 +70,7 @@ class TransactionRepository extends ServiceEntityRepository
     {
         $start = Month::firstDayOf($month);
 
-        return $this->withCategories($this->ownedWithoutSettlements($owner))
+        return $this->withCategories($this->ownedListed($owner))
             ->addSelect('a')
             ->andWhere('t.date >= :start')
             ->andWhere('t.date < :end')
@@ -90,7 +90,7 @@ class TransactionRepository extends ServiceEntityRepository
     public function findDateRange(User $owner): ?array
     {
         /** @var array{first: ?string, last: ?string} $range */
-        $range = $this->ownedWithoutSettlements($owner)
+        $range = $this->ownedListed($owner)
             ->select('MIN(t.date) AS first', 'MAX(t.date) AS last')
             ->getQuery()
             ->getSingleResult();
@@ -145,9 +145,9 @@ class TransactionRepository extends ServiceEntityRepository
         $rows = $this->createQueryBuilder('t')
             ->select('IDENTITY(t.statementImport) AS import', 'MIN(t.date) AS first', 'MAX(t.date) AS last')
             ->where('t.statementImport IN (:imports)')
-            ->andWhere('t.kind != :settlement')
+            ->andWhere('t.kind NOT IN (:unlisted)')
             ->setParameter('imports', $imports)
-            ->setParameter('settlement', TransactionKind::DeferredCardSettlement)
+            ->setParameter('unlisted', TransactionKind::unlisted())
             ->groupBy('t.statementImport')
             ->getQuery()
             ->getArrayResult();
@@ -162,16 +162,21 @@ class TransactionRepository extends ServiceEntityRepository
 
     /**
      * The owner's transactions that may come back, oldest first, with their counterparty and series: all but the
-     * deferred card settlements, which only add up purchases.
+     * card settlements, which only add up purchases.
      *
      * @return list<Transaction>
      */
     public function findForRecurrence(User $owner): array
     {
-        return $this->ownedWithoutSettlements($owner)
+        return $this->createQueryBuilder('t')
             ->addSelect('a', 's', 'k')
+            ->join('t.account', 'a')
             ->leftJoin('t.recurringSeries', 's')
             ->leftJoin('t.counterparty', 'k')
+            ->where('a.owner = :owner')
+            ->andWhere('t.kind NOT IN (:nonRecurring)')
+            ->setParameter('owner', $owner)
+            ->setParameter('nonRecurring', TransactionKind::nonRecurring())
             ->orderBy('t.date', 'ASC')
             ->addOrderBy('t.id', 'ASC')
             ->getQuery()
@@ -282,7 +287,7 @@ class TransactionRepository extends ServiceEntityRepository
      */
     public function findInCategories(User $owner, array $categories, \DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->withCategories($this->ownedWithoutSettlements($owner))
+        return $this->withCategories($this->ownedListed($owner))
             ->addSelect('a')
             ->andWhere(<<<'DQL'
                 t.category IN (:categories)
@@ -327,7 +332,7 @@ class TransactionRepository extends ServiceEntityRepository
      */
     public function findOfCounterparty(Counterparty $counterparty, string $currency, bool $income): array
     {
-        return $this->withCategories($this->ownedWithoutSettlements($counterparty->getOwner()))
+        return $this->withCategories($this->ownedListed($counterparty->getOwner()))
             ->addSelect('a')
             ->andWhere('t.counterparty = :counterparty')
             ->andWhere('t.currency = :currency')
@@ -375,13 +380,16 @@ class TransactionRepository extends ServiceEntityRepository
             ->leftJoin('sc.parent', 'scp');
     }
 
-    private function ownedWithoutSettlements(User $owner): QueryBuilder
+    /**
+     * The owner's transactions that are listed: a deferred card settlement only repeats the purchases.
+     */
+    private function ownedListed(User $owner): QueryBuilder
     {
         return $this->createQueryBuilder('t')
             ->join('t.account', 'a')
             ->where('a.owner = :owner')
-            ->andWhere('t.kind != :settlement')
+            ->andWhere('t.kind NOT IN (:unlisted)')
             ->setParameter('owner', $owner)
-            ->setParameter('settlement', TransactionKind::DeferredCardSettlement);
+            ->setParameter('unlisted', TransactionKind::unlisted());
     }
 }

@@ -56,7 +56,7 @@ final readonly class CalendarBuilder
         $entries = array_map(CalendarEntry::of(...), array_values(array_filter(
             $this->transactions->findOfMonth($owner, $month),
             static fn (Transaction $transaction): bool => $transaction->getAmount() < 0
-                && !$transaction->isInternalTransfer()
+                && $transaction->countsInTotals()
                 && (CalendarFilter::All === $filter || $transaction->isRecurring()),
         )));
 

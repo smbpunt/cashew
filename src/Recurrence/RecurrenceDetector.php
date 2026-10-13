@@ -25,12 +25,6 @@ final readonly class RecurrenceDetector
      */
     public const int MIN_CONFIDENCE = 60;
 
-    /**
-     * How Crédit Agricole names the monthly debit of a deferred debit card: imported as regular when the card
-     * statement is missing, it only adds up purchases.
-     */
-    private const string CARD_SETTLEMENT = 'debit mensuel carte';
-
     public function __construct(
         private TransactionRepository $transactions,
         private RecurringSeriesRepository $series,
@@ -61,7 +55,7 @@ final readonly class RecurrenceDetector
             $lastDates[spl_object_id($account)] = max($lastDates[spl_object_id($account)] ?? $transaction->getDate(), $transaction->getDate());
 
             $counterparty = $transaction->getCounterparty();
-            if (null === $counterparty || str_starts_with($counterparty->getKey(), self::CARD_SETTLEMENT) || 0 === $transaction->getAmount()) {
+            if (null === $counterparty || 0 === $transaction->getAmount()) {
                 continue;
             }
 

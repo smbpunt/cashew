@@ -23,7 +23,7 @@ final class CreditAgricoleParserTest extends TestCase
             ['2026-09-15', "Prélèvement\nFREE MOBILE", -1999, TransactionKind::Regular],
             ['2026-09-15', "Prélèvement\nFREE MOBILE", -1999, TransactionKind::Regular],
             // No card statement in the export for this settlement: its purchases aren't imported, it is
-            ['2026-08-31', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000, TransactionKind::Regular],
+            ['2026-08-31', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -8000, TransactionKind::CardSettlement],
             ['2026-09-25', 'CARREFOUR MARSEILLE', -5000, TransactionKind::DeferredCardPurchase],
             ['2026-09-02', 'BOULANGERIE DU PORT', -1240, TransactionKind::DeferredCardPurchase],
         ], array_map(static fn (ParsedTransaction $transaction): array => [

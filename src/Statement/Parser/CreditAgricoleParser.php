@@ -19,7 +19,7 @@ use App\Statement\StatementSample;
  *
  * The purchases of a card statement are imported one by one, and the account's "Prélèvement carte" line that
  * debits their total is marked as their settlement. A settlement without its card statement (older than the
- * card statements the export holds) stays a regular transaction.
+ * card statements the export holds) is a card settlement: its purchases aren't imported, it counts instead.
  */
 final readonly class CreditAgricoleParser implements StatementParser
 {
@@ -82,7 +82,7 @@ final readonly class CreditAgricoleParser implements StatementParser
 
             $kind = match (true) {
                 $inCardStatement => TransactionKind::DeferredCardPurchase,
-                str_starts_with($label, 'Prélèvement carte') && isset($settlements[self::settlementKey($date, $amount)]) => TransactionKind::DeferredCardSettlement,
+                str_starts_with($label, 'Prélèvement carte') => isset($settlements[self::settlementKey($date, $amount)]) ? TransactionKind::DeferredCardSettlement : TransactionKind::CardSettlement,
                 default => TransactionKind::Regular,
             };
 
