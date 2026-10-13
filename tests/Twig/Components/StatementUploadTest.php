@@ -6,6 +6,7 @@ use App\Entity\StatementImport;
 use App\Entity\User;
 use App\Message\ImportStatement;
 use App\MessageHandler\ImportStatementHandler;
+use App\Tests\SwitchesLocaleTrait;
 use App\Twig\Components\StatementUpload;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -21,6 +22,7 @@ final class StatementUploadTest extends WebTestCase
 {
     use ClockSensitiveTrait;
     use InteractsWithLiveComponents;
+    use SwitchesLocaleTrait;
 
     private const string FIXTURES = __DIR__.'/../../Fixtures/Statement/';
 
@@ -160,7 +162,7 @@ final class StatementUploadTest extends WebTestCase
 
     public function testSpeaksTheLanguageOfTheUser(): void
     {
-        $this->client->request('GET', '/locale/fr');
+        $this->switchLocale($this->client, 'fr');
 
         self::assertStringContainsString('30 septembre 2026', (string) $this->component()->render());
 

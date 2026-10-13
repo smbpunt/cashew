@@ -9,7 +9,7 @@
 </div>
 
 {% if not has_categories %}
-    {{ include('category/_seed.html.twig', {redirect: 'app_categories'}) }}
+    {{ include('category/_seed.html.twig', {from: 'categories'}) }}
 {% endif %}
 
 <twig:Card>

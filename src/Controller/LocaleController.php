@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 final class LocaleController extends AbstractController
 {
@@ -21,7 +22,8 @@ final class LocaleController extends AbstractController
      *
      * @param list<string> $enabledLocales
      */
-    #[Route('/locale/{locale}', name: 'app_locale', methods: ['GET'])]
+    #[Route('/locale/{locale}', name: 'app_locale', methods: ['POST'])]
+    #[IsCsrfTokenValid('locale')]
     public function switch(
         string $locale,
         Request $request,

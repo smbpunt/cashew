@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Category\CategorySeeder;
 use App\Entity\Category;
 use App\Entity\User;
+use App\Enum\SeedOrigin;
 use App\Form\CategoryType;
 use App\Report\CategoryHistoryBuilder;
 use App\Repository\CategoryRepository;
@@ -16,6 +17,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -26,11 +28,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/categories')]
 final class CategoryController extends AbstractController
 {
-    /**
-     * Where the seeding may send the user back to.
-     */
-    private const array SEED_REDIRECTS = ['app_categories', 'app_review'];
-
     #[Route('', name: 'app_categories', methods: ['GET'])]
     public function index(#[CurrentUser] User $user, CategoryRepository $categories): Response
     {
@@ -92,14 +89,16 @@ final class CategoryController extends AbstractController
      */
     #[Route('/seed', name: 'app_category_seed', methods: ['POST'])]
     #[IsCsrfTokenValid('seed-categories')]
-    public function seed(#[CurrentUser] User $user, Request $request, CategoryRepository $categories, CategorySeeder $seeder): Response
-    {
+    public function seed(
+        #[CurrentUser] User $user,
+        CategoryRepository $categories,
+        CategorySeeder $seeder,
+        #[MapQueryParameter] SeedOrigin $from = SeedOrigin::Categories,
+    ): Response {
         if (!$categories->hasAny($user)) {
             $seeder->seed($user);
         }
 
-        $redirect = $request->getPayload()->getString('redirect');
-
-        return $this->redirectToRoute(\in_array($redirect, self::SEED_REDIRECTS, true) ? $redirect : 'app_categories', status: Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute($from->route(), status: Response::HTTP_SEE_OTHER);
     }
 }

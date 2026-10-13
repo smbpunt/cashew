@@ -2,6 +2,7 @@
 
 namespace App\Category;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -34,7 +35,17 @@ final readonly class IconSearch
         private HttpClientInterface $client,
         #[Target('iconify.cache')]
         private CacheInterface $cache,
+        #[Autowire(param: 'app.iconify_url')]
+        private string $iconifyUrl,
     ) {
+    }
+
+    /**
+     * Where the browser draws an icon from, for the server not to fetch them one by one.
+     */
+    public function previewUrl(string $icon): string
+    {
+        return $this->iconifyUrl.'/'.str_replace(':', '/', $icon).'.svg';
     }
 
     /**

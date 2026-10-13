@@ -1,7 +1,6 @@
-{# A first set of categories, for a user without any; "redirect" is the route to come back to #}
-<form method="post" action="{{ path('app_category_seed') }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-3">
+{# A first set of categories, for a user without any; "from" is the page to come back to, as App\Enum\SeedOrigin #}
+<form method="post" action="{{ path('app_category_seed', {from: from}) }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-3">
     <p class="text-sm text-muted-foreground">{{ 'category.seed.description'|trans }}</p>
     <input type="hidden" name="_token" value="{{ csrf_token('seed-categories') }}">
-    <input type="hidden" name="redirect" value="{{ redirect }}">
     <twig:Button type="submit" variant="secondary" size="sm">{{ 'category.seed.submit'|trans }}</twig:Button>
 </form>

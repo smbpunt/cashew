@@ -8,11 +8,14 @@ use App\Enum\Bank;
 use App\Repository\BankAccountRepository;
 use App\Statement\AccountRef;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Finds the account a statement names, or creates it.
+ *
+ * Reset between the messages a worker handles, for its cache not to grow with every import.
  */
-final class AccountResolver
+final class AccountResolver implements ResetInterface
 {
     /**
      * @var array<string, BankAccount>
@@ -35,6 +38,11 @@ final class AccountResolver
         }
 
         return $this->accounts[$key];
+    }
+
+    public function reset(): void
+    {
+        $this->accounts = [];
     }
 
     private function create(User $owner, Bank $bank, AccountRef $ref): BankAccount

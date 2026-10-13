@@ -91,6 +91,27 @@ final class ImportStatementHandlerTest extends KernelTestCase
         self::assertSame(9, $this->entityManager->getRepository(Transaction::class)->count(['counterparty' => $carrefour]));
     }
 
+    public function testEachUserHasCounterpartiesOfTheirOwn(): void
+    {
+        self::mockTime('2026-10-11');
+        $counterparties = $this->entityManager->getRepository(Counterparty::class);
+        $this->uploadAndImport('credit_agricole.csv');
+        $count = $counterparties->count(['owner' => $this->user->getId()]);
+        self::assertGreaterThan(0, $count);
+
+        // The same transactions, in another file: the same counterparties
+        $this->uploadAndImport('credit_agricole.csv', append: "\n");
+        self::assertSame($count, $counterparties->count(['owner' => $this->user->getId()]));
+
+        $this->user = new User()->setLogin('bob')->setPassword('not-a-real-hash');
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
+        $this->uploadAndImport('credit_agricole.csv');
+
+        self::assertSame($count, $counterparties->count(['owner' => $this->user->getId()]));
+        self::assertSame(2 * $count, $counterparties->count([]));
+    }
+
     public function testLeavesTheMonthInProgressForLater(): void
     {
         self::mockTime('2026-09-20');

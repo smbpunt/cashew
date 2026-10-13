@@ -105,7 +105,7 @@
         </twig:Card:Header>
         <twig:Card:Content class="flex flex-col gap-4">
             {% if not has_categories %}
-                {{ include('category/_seed.html.twig', {redirect: 'app_review'}) }}
+                {{ include('category/_seed.html.twig', {from: 'review'}) }}
             {% endif %}
             <twig:CategoryForm />
         </twig:Card:Content>

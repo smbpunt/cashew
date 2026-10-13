@@ -1,15 +1,17 @@
 <nav {{ attributes.defaults({class: 'flex items-center gap-1', 'aria-label': 'locale.switcher'|trans}) }}>
     {% for locale in app.enabled_locales %}
-        <twig:Button
-            as="a"
-            variant="ghost"
-            size="sm"
-            class="font-mono uppercase text-muted-foreground aria-[current=true]:bg-muted aria-[current=true]:text-foreground"
-            href="{{ path('app_locale', {locale: locale, target: app.request.requestUri}) }}"
-            hreflang="{{ locale }}"
-            lang="{{ locale }}"
-            title="{{ locale|locale_name(locale)|capitalize }}"
-            aria-current="{{ locale == app.request.locale ? 'true' : 'false' }}"
-        >{{ locale }}</twig:Button>
+        <form method="post" action="{{ path('app_locale', {locale: locale, target: app.request.requestUri}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
+            <twig:Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                class="font-mono uppercase text-muted-foreground aria-[current=true]:bg-muted aria-[current=true]:text-foreground"
+                lang="{{ locale }}"
+                title="{{ locale|locale_name(locale)|capitalize }}"
+                aria-current="{{ locale == app.request.locale ? 'true' : 'false' }}"
+                data-locale="{{ locale }}"
+            >{{ locale }}</twig:Button>
+        </form>
     {% endfor %}
 </nav>

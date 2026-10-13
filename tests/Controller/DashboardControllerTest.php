@@ -11,6 +11,7 @@ use App\Enum\CategoryRole;
 use App\Enum\Periodicity;
 use App\Enum\TransactionKind;
 use App\Tests\EntityFactoryTrait;
+use App\Tests\SwitchesLocaleTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -22,6 +23,7 @@ final class DashboardControllerTest extends WebTestCase
 {
     use ClockSensitiveTrait;
     use EntityFactoryTrait;
+    use SwitchesLocaleTrait;
 
     private KernelBrowser $client;
     private User $user;
@@ -406,7 +408,7 @@ final class DashboardControllerTest extends WebTestCase
     {
         $this->createTransactions();
 
-        $this->client->request('GET', '/locale/fr');
+        $this->switchLocale($this->client, 'fr');
         $this->client->request('GET', '/dashboard');
 
         self::assertSelectorTextContains('h1', 'Septembre 2026');

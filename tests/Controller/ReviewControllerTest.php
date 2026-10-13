@@ -81,7 +81,7 @@ final class ReviewControllerTest extends WebTestCase
         self::assertSelectorTextContains('[data-series]:last-child', '2 occurrences, the last one on Sep 15, 2026');
         self::assertSelectorTextContains('[data-nav-review]', '2');
         // No categories yet: a first set is offered
-        self::assertSelectorExists('form[action="/categories/seed"] input[name="redirect"][value="app_review"]');
+        self::assertSelectorExists('form[action="/categories/seed?from=review"]');
     }
 
     public function testShowsTheFirstAndLastDaysOfWhatEachImportBrought(): void

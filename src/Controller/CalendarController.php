@@ -14,7 +14,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\ExpressionLanguage\Expression;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
@@ -49,12 +48,17 @@ final class CalendarController extends AbstractController
     #[Route('/series/{id}/end', name: 'app_calendar_series_end', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(OwnerVoter::OWNER, 'series')]
     #[IsCsrfTokenValid(new Expression('"series-" ~ args["series"].getId()'))]
-    public function end(RecurringSeries $series, Request $request, ClockInterface $clock, EntityManagerInterface $entityManager): Response
-    {
+    public function end(
+        RecurringSeries $series,
+        ClockInterface $clock,
+        EntityManagerInterface $entityManager,
+        ?Month $month = null,
+        #[MapQueryParameter] ?CalendarFilter $show = null,
+    ): Response {
         $series->end($clock->now()->setTime(0, 0));
         $entityManager->flush();
 
-        return $this->backToCalendar($request);
+        return $this->backToCalendar($month, $show);
     }
 
     /**
@@ -63,12 +67,18 @@ final class CalendarController extends AbstractController
     #[Route('/series/{id}/keep', name: 'app_calendar_series_keep', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(OwnerVoter::OWNER, 'series')]
     #[IsCsrfTokenValid(new Expression('"series-" ~ args["series"].getId()'))]
-    public function keep(RecurringSeries $series, Request $request, TransactionRepository $transactions, SeriesSchedule $schedule, EntityManagerInterface $entityManager): Response
-    {
+    public function keep(
+        RecurringSeries $series,
+        TransactionRepository $transactions,
+        SeriesSchedule $schedule,
+        EntityManagerInterface $entityManager,
+        ?Month $month = null,
+        #[MapQueryParameter] ?CalendarFilter $show = null,
+    ): Response {
         $series->keepActive($schedule->knownUntil($series, $transactions->findLastDates($series->getOwner())));
         $entityManager->flush();
 
-        return $this->backToCalendar($request);
+        return $this->backToCalendar($month, $show);
     }
 
     /**
@@ -77,22 +87,26 @@ final class CalendarController extends AbstractController
     #[Route('/series/{id}/resume', name: 'app_calendar_series_resume', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(OwnerVoter::OWNER, 'series')]
     #[IsCsrfTokenValid(new Expression('"series-" ~ args["series"].getId()'))]
-    public function resume(RecurringSeries $series, Request $request, EntityManagerInterface $entityManager): Response
-    {
+    public function resume(
+        RecurringSeries $series,
+        EntityManagerInterface $entityManager,
+        ?Month $month = null,
+        #[MapQueryParameter] ?CalendarFilter $show = null,
+    ): Response {
         $series->resume();
         $entityManager->flush();
 
-        return $this->backToCalendar($request);
+        return $this->backToCalendar($month, $show);
     }
 
     /**
      * To the month, and the filter, the action was made from.
      */
-    private function backToCalendar(Request $request): Response
+    private function backToCalendar(?Month $month, ?CalendarFilter $show): Response
     {
         return $this->redirectToRoute('app_calendar', array_filter([
-            'month' => $request->query->getString('month'),
-            'show' => $request->query->getString('show'),
+            'month' => $month?->key(),
+            'show' => $show?->value,
         ]), Response::HTTP_SEE_OTHER);
     }
 }

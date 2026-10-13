@@ -73,7 +73,7 @@ final class IconPicker
      */
     public function preview(string $icon): string
     {
-        return 'https://api.iconify.design/'.str_replace(':', '/', $icon).'.svg';
+        return $this->icons->previewUrl($icon);
     }
 
     private static function valid(?string $icon): ?string

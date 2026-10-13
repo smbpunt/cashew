@@ -9,6 +9,7 @@ use App\Enum\Periodicity;
 use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
 use App\Tests\EntityFactoryTrait;
+use App\Tests\SwitchesLocaleTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -19,6 +20,7 @@ final class CalendarControllerTest extends WebTestCase
 {
     use ClockSensitiveTrait;
     use EntityFactoryTrait;
+    use SwitchesLocaleTrait;
 
     private KernelBrowser $client;
     private User $user;
@@ -203,7 +205,7 @@ final class CalendarControllerTest extends WebTestCase
     public function testSpeaksTheLanguageOfTheUser(): void
     {
         $this->createTransactions();
-        $this->client->request('GET', '/locale/fr');
+        $this->switchLocale($this->client, 'fr');
 
         $this->client->request('GET', '/calendar');
 

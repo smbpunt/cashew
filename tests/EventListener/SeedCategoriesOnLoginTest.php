@@ -5,6 +5,7 @@ namespace App\Tests\EventListener;
 use App\Entity\Category;
 use App\Entity\User;
 use App\Tests\EntityFactoryTrait;
+use App\Tests\SwitchesLocaleTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -13,6 +14,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class SeedCategoriesOnLoginTest extends WebTestCase
 {
     use EntityFactoryTrait;
+    use SwitchesLocaleTrait;
 
     private const string PASSWORD = 'Correct-Horse-Battery-9';
 
@@ -37,7 +39,7 @@ final class SeedCategoriesOnLoginTest extends WebTestCase
 
     public function testGivesTheDefaultCategoriesAtTheFirstLoginInTheLanguageOfTheLoginPage(): void
     {
-        $this->client->request('GET', '/locale/fr');
+        $this->switchLocale($this->client, 'fr');
         $this->logIn('Se connecter');
 
         self::assertContains('Maison › Loyer', $this->categoryPaths());

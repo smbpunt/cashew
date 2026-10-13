@@ -11,6 +11,7 @@ use App\Enum\CategoryRole;
 use App\Enum\Periodicity;
 use App\Enum\SeriesStatus;
 use App\Tests\EntityFactoryTrait;
+use App\Tests\SwitchesLocaleTrait;
 use App\Twig\Components\CategoryForm;
 use App\Twig\Components\TransactionCategory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +27,7 @@ final class CategoryControllerTest extends WebTestCase
     use ClockSensitiveTrait;
     use EntityFactoryTrait;
     use InteractsWithLiveComponents;
+    use SwitchesLocaleTrait;
 
     private KernelBrowser $client;
     private User $user;
@@ -52,7 +54,7 @@ final class CategoryControllerTest extends WebTestCase
 
     public function testOffersAFirstSetOfCategoriesInTheLanguageOfTheUser(): void
     {
-        $this->client->request('GET', '/locale/fr');
+        $this->switchLocale($this->client, 'fr');
         $this->client->request('GET', '/categories');
         self::assertSelectorExists('[data-empty]');
 
@@ -67,6 +69,23 @@ final class CategoryControllerTest extends WebTestCase
         self::assertSelectorExists('[data-category="Revenus"] svg[data-category-icon="lucide:wallet"]');
         // Seeded once and for all: deleting them won't bring them back at the next login
         self::assertTrue(self::getContainer()->get(EntityManagerInterface::class)->find(User::class, $this->user->getId())?->hasSeededCategories());
+    }
+
+    public function testSeedingFromTheReviewGoesBackToIt(): void
+    {
+        $this->client->request('GET', '/review');
+        $this->client->submitForm('Create suggested categories');
+
+        self::assertResponseRedirects('/review');
+    }
+
+    public function testSeedingFromAnUnknownPageIsNotFound(): void
+    {
+        $this->client->request('GET', '/categories');
+        $token = $this->client->getCrawler()->filter('form[action="/categories/seed?from=categories"] input[name="_token"]')->attr('value');
+        $this->client->request('POST', '/categories/seed?from=elsewhere', ['_token' => $token]);
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testRenamesAndMovesACategory(): void

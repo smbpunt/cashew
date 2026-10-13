@@ -12,7 +12,7 @@ framework:
         scoped_clients:
             # Searches the icons of the categories
             iconify.client:
-                base_uri: 'https://api.iconify.design'
+                base_uri: '%app.iconify_url%'
                 timeout: 5
 
 when@test:
