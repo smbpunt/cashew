@@ -10,6 +10,7 @@ use App\Statement\Exception\UnreadableStatementException;
 use App\Statement\Import\StatementImporter;
 use App\Statement\StatementImportNotifier;
 use App\Statement\StatementStorage;
+use App\Transfer\TransferDetector;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Clock\ClockInterface;
@@ -27,6 +28,7 @@ final readonly class ImportStatementHandler
         private StatementImportRepository $imports,
         private StatementImporter $importer,
         private RecurrenceDetector $recurrences,
+        private TransferDetector $transfers,
         private StatementStorage $storage,
         private StatementImportNotifier $notifier,
         private ManagerRegistry $doctrine,
@@ -82,6 +84,7 @@ final readonly class ImportStatementHandler
                     // For the detection to group them with the transactions known already
                     $entityManager->flush();
                     $this->recurrences->detect($import->getOwner());
+                    $this->transfers->detect($import);
 
                     $import->complete($result->bank, $result->importedCount, $result->skippedCount, $result->afterCutoffCount, $this->clock->now());
                 });

@@ -56,7 +56,8 @@ final class SeedCategoriesOnLoginTest extends WebTestCase
         $this->client->restart();
         $this->logIn('Sign in');
 
-        self::assertSame([], $this->categoryPaths());
+        // But the system one, which the import files transfers in
+        self::assertSame(['Transfers'], $this->categoryPaths());
     }
 
     public function testLeavesTheCategoriesOfAUserWhoMadeTheirOwnAlready(): void
@@ -66,7 +67,7 @@ final class SeedCategoriesOnLoginTest extends WebTestCase
 
         $this->logIn('Sign in');
 
-        self::assertSame(['Mine'], $this->categoryPaths());
+        self::assertSame(['Mine', 'Transfers'], $this->categoryPaths());
         self::assertTrue($this->reloadUser()->hasSeededCategories());
     }
 

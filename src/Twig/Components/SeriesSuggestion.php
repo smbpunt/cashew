@@ -7,6 +7,7 @@ use App\Entity\Category;
 use App\Entity\RecurringSeries;
 use App\Entity\Transaction;
 use App\Entity\User;
+use App\Enum\CategoryRole;
 use App\Form\SeriesReviewType;
 use App\Repository\TransactionRepository;
 use App\Security\OwnerVoter;
@@ -61,6 +62,14 @@ final class SeriesSuggestion extends AbstractController
         /** @var array{name: string, category: ?Category} $data */
         $data = $this->getForm()->getData();
         $this->series->confirm($data['name'], $data['category']);
+        // Filed as transfers on import, they take the category of their series: the rent paid by transfer goes to "Rent"
+        if (null !== $data['category']) {
+            foreach ($this->getOccurrences() as $transaction) {
+                if (CategoryRole::Transfers === $transaction->getCategory()?->getRole()) {
+                    $transaction->categorize(null);
+                }
+            }
+        }
         $this->entityManager->flush();
 
         $this->emitUp('series:reviewed', ['id' => $this->series->getId()]);
@@ -97,6 +106,17 @@ final class SeriesSuggestion extends AbstractController
     }
 
     /**
+     * The category every occurrence is filed in, transfers for instance, if they share one.
+     */
+    private function sharedCategory(): ?Category
+    {
+        $categories = array_map(static fn (Transaction $transaction): ?Category => $transaction->getCategory(), $this->getOccurrences());
+        $first = array_first($categories);
+
+        return array_all($categories, static fn (?Category $category): bool => $category === $first) ? $first : null;
+    }
+
+    /**
      * @return FormInterface<array{name: string, category: ?Category}>
      */
     protected function instantiateForm(): FormInterface
@@ -107,7 +127,7 @@ final class SeriesSuggestion extends AbstractController
         // Named after the series, for the fields of the suggestions listed together to have ids of their own
         return $this->formFactory->createNamed(\sprintf('series_%d', $this->series->getId()), SeriesReviewType::class, [
             'name' => $this->series->getName(),
-            'category' => $this->series->getCategory(),
+            'category' => $this->series->getCategory() ?? $this->sharedCategory(),
         ], [
             'categories' => $this->categories->of($user),
         ]);

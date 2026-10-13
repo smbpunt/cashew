@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Form\CategoryType;
 use App\Report\CategoryHistoryBuilder;
 use App\Repository\CategoryRepository;
+use App\Security\CategoryVoter;
 use App\Security\OwnerVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -73,10 +74,10 @@ final class CategoryController extends AbstractController
     }
 
     /**
-     * Its subcategories go with it; its transactions and series lose it.
+     * Its subcategories go with it; its transactions and series lose it. A system category can't go.
      */
     #[Route('/{id}/delete', name: 'app_category_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
-    #[IsGranted(OwnerVoter::OWNER, 'category')]
+    #[IsGranted(CategoryVoter::DELETE, 'category')]
     #[IsCsrfTokenValid(new Expression('"delete-category-" ~ args["category"].getId()'))]
     public function delete(Category $category, EntityManagerInterface $entityManager): Response
     {

@@ -15,7 +15,7 @@ use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * A category's name, its icon, and the top category it's in, if any.
+ * A category's name, its icon, and the top category it's in, if any: a system category has no say in the latter.
  *
  * @extends AbstractType<Category>
  */
@@ -41,7 +41,14 @@ final class CategoryType extends AbstractType
             ->add('icon', HiddenType::class, [
                 'required' => false,
                 'error_bubbling' => false,
-            ])
+            ]);
+
+        // The application relies on it: it stays at the top
+        if ($category instanceof Category && $category->isSystem()) {
+            return;
+        }
+
+        $builder
             ->add('parent', EntityType::class, [
                 'label' => 'category.form.parent',
                 'class' => Category::class,

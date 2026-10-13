@@ -16,4 +16,10 @@ enum TransactionKind: string
      * leave it out of spending totals, or the purchases count twice.
      */
     case DeferredCardSettlement = 'deferred_card_settlement';
+
+    /**
+     * Money moved from one of the user's accounts to another, a pocket included: neither spent nor earned, it stays
+     * out of the totals, on both sides.
+     */
+    case InternalTransfer = 'internal_transfer';
 }

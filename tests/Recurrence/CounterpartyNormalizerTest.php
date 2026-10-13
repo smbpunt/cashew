@@ -54,5 +54,30 @@ final class CounterpartyNormalizerTest extends TestCase
     public function testNamesTheCounterparty(): void
     {
         self::assertSame('Salaire Acme Sas', new CounterpartyNormalizer()->name('salaire acme sas'));
+        self::assertSame('Generali Iard Sa · AU856955', new CounterpartyNormalizer()->name('generali iard sa', 'au856955'));
+    }
+
+    public function testTellsTheReferencesOfTheWholeLabel(): void
+    {
+        self::assertSame(
+            ['au856955', '260820261945979', 'fr7611306000474815308160605', 'fr62zzz008982', 'tigr26082026i90777'],
+            new CounterpartyNormalizer()->references("Prélèvement\nGENERALI IARD SA - Generali - Contrat AU856955-260820261945979\nFR7611306000474815308160605\nFR62ZZZ008982\nTIGR26082026I90777"),
+        );
+        // Each once
+        self::assertSame(
+            ['518397105', '260820260477767', 'tigr1130648153081606', 'fr22zzz102628'],
+            new CounterpartyNormalizer()->references("Prélèvement\nGENERALI VIE SA - Generali - Contrat 518397105-260820260477767\nTIGR1130648153081606---518397105\nFR22ZZZ102628"),
+        );
+    }
+
+    public function testDatesTimesAndShortNumbersAreNotReferences(): void
+    {
+        self::assertSame([], new CounterpartyNormalizer()->references("Retrait au distributeur\nMIRAMAS EXT 17/07 16H11 ECHEANCE 11/2025 X7167 O2SWITCH"));
+    }
+
+    public function testTellsTheWordsOfTheLabel(): void
+    {
+        self::assertSame('virement a helene dupre', new CounterpartyNormalizer()->words('Virement à : Hélène Dupré'));
+        self::assertSame('virement emis vir inst vers dylan t', new CounterpartyNormalizer()->words("Virement émis\nVIR INST vers DYLAN T"));
     }
 }

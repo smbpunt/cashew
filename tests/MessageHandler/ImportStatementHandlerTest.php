@@ -156,6 +156,26 @@ final class ImportStatementHandlerTest extends KernelTestCase
         );
     }
 
+    public function testFilesTheTransfersOfTheStatement(): void
+    {
+        self::mockTime('2026-10-11');
+        $statement = (string) file_get_contents(self::FIXTURES.'revolut.csv');
+        // The other side of the money put on the pocket
+        $row = '"14 août 2026","Frais de livraison de carte"';
+        $statement = str_replace($row, '"1 août 2026","Transfert vers Vacances",,"-100,00€","1 385,00€","0,00€","0,00€","0,00€",,,,,'."\n".$row, $statement);
+
+        $this->uploadAndImport(contents: $statement);
+
+        $transactions = $this->entityManager->getRepository(Transaction::class);
+        foreach (['Transfert vers Vacances', 'Transfert depuis Compte personnel'] as $label) {
+            $side = $transactions->findOneBy(['label' => $label]);
+            self::assertSame(TransactionKind::InternalTransfer, $side?->getKind(), $label);
+            self::assertSame('Transfers', $side->getCategory()?->getName());
+        }
+        // Received from someone else
+        self::assertNull($transactions->findOneBy(['label' => 'Virement de : JANE DOE'])?->getCategory());
+    }
+
     public function testTheSameFileCanOnlyBeUploadedAgainAfterItsImportFailed(): void
     {
         self::mockTime('2026-10-11');

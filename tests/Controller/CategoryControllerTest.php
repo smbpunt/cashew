@@ -7,6 +7,7 @@ use App\Entity\RecurringSeries;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Bank;
+use App\Enum\CategoryRole;
 use App\Enum\Periodicity;
 use App\Tests\EntityFactoryTrait;
 use App\Twig\Components\CategoryForm;
@@ -59,7 +60,7 @@ final class CategoryControllerTest extends WebTestCase
         self::assertResponseRedirects('/categories');
         $crawler = $this->client->followRedirect();
         self::assertSelectorNotExists('form[action="/categories/seed"]');
-        self::assertSame(['Abonnements', 'Achats', 'Alimentation', 'Banque', 'Épargne', 'Impôts', 'Loisirs', 'Maison', 'Revenus', 'Santé', 'Transport'], $crawler->filter('[data-category] > div > a:first-child')->each(static fn ($link): string => $link->text()));
+        self::assertSame(['Abonnements', 'Achats', 'Alimentation', 'Banque', 'Épargne', 'Impôts', 'Loisirs', 'Maison', 'Revenus', 'Santé', 'Transport', 'Virements'], $crawler->filter('[data-category] > div > a:first-child')->each(static fn ($link): string => $link->text()));
         self::assertSame(['Assurance', 'Eau', 'Énergie', 'Entretien & travaux', 'Internet', 'Loyer', 'Prêt'], $crawler->filter('[data-category="Maison"] li')->each(static fn ($child): string => $child->text()));
         self::assertSelectorExists('[data-category="Maison"] svg[data-category-icon="lucide:house"]');
         self::assertSelectorExists('[data-category="Revenus"] svg[data-category-icon="lucide:wallet"]');
@@ -175,6 +176,25 @@ final class CategoryControllerTest extends WebTestCase
 
         self::assertResponseRedirects('/login');
         self::assertSame(1, self::getContainer()->get(EntityManagerInterface::class)->getRepository(Category::class)->count([]));
+    }
+
+    public function testTheTransfersCategoryCanBeRenamedButNotDeleted(): void
+    {
+        $transfers = $this->createCategory($this->user, 'Transfers')->setRole(CategoryRole::Transfers);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', \sprintf('/categories/%d/edit', $transfers->getId()));
+        self::assertSelectorNotExists('form[action$="/delete"]');
+        self::assertSelectorTextContains('[data-system-category]', 'it can be renamed, not deleted');
+        // It stays at the top
+        self::assertSelectorNotExists('select[name="category[parent]"]');
+
+        $this->client->submitForm('Save', ['category[name]' => 'Money sent']);
+        self::assertResponseRedirects('/categories');
+
+        $this->client->request('POST', \sprintf('/categories/%d/delete', $transfers->getId()), ['_token' => 'whatever']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('Money sent', self::getContainer()->get(EntityManagerInterface::class)->find(Category::class, $transfers->getId())?->getName());
     }
 
     public function testTheCategoriesOfSomeoneElseAreOutOfReach(): void

@@ -6,8 +6,10 @@ use App\Entity\BankAccount;
 use App\Entity\Category;
 use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
+use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Bank;
+use App\Enum\CategoryRole;
 use App\Enum\Periodicity;
 use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
@@ -108,6 +110,56 @@ final class ReviewControllerTest extends WebTestCase
         self::assertSelectorTextSame('[data-import-status]:nth-child(2) [data-import-period]', 'On Aug 14, 2026');
         // Nothing new: no days to show
         self::assertSelectorNotExists('[data-import-status]:nth-child(1) [data-import-period]');
+    }
+
+    public function testListsTheTransfersTheImportsBroughtForTheUserToFileThemElsewhere(): void
+    {
+        $import = new StatementImport($this->user, 'september.csv', null, str_repeat('0', 64), new \DateTimeImmutable());
+        $import->complete(Bank::CreditAgricole, 3, 0, 0, new \DateTimeImmutable());
+        $this->entityManager->persist($import);
+        $transfers = $this->createCategory($this->user, 'Transfers')->setRole(CategoryRole::Transfers);
+        $this->createTransaction($this->account, '2026-09-24', "Virement émis\nVIR INST vers Bastien", -5000, import: $import)->categorize($transfers);
+        $internal = $this->createTransaction($this->account, '2026-09-25', "Virement émis\nVIR INST vers Revolut", -2000, import: $import);
+        $internal->categorize($transfers);
+        $internal->markAsInternalTransfer();
+        $this->createTransaction($this->account, '2026-09-26', 'CARREFOUR', -3000, import: $import);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', \sprintf('/review?imports[]=%d', $import->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#transfers', '2 transfers');
+        self::assertSelectorTextContains('[data-transfer]:first-child', 'Virement émis · VIR INST vers Revolut');
+        self::assertSelectorTextContains('[data-transfer]:first-child [data-internal]', 'Between your accounts');
+        self::assertSelectorTextContains('[data-transfer]:last-child', 'To someone else');
+        self::assertSelectorExists('[data-transfer] select[data-model="categoryId"]');
+    }
+
+    public function testConfirmingASeriesOfTransfersFilesThemInItsCategory(): void
+    {
+        $transfers = $this->createCategory($this->user, 'Transfers')->setRole(CategoryRole::Transfers);
+        $rent = $this->createCategory($this->user, 'Rent');
+        $series = $this->createSeries('Web Loyer', 90, ['2026-08-01' => -80000, '2026-09-01' => -80000]);
+        $this->entityManager->flush();
+        foreach ($this->entityManager->getRepository(Transaction::class)->findBy(['recurringSeries' => $series]) as $transaction) {
+            $transaction->categorize($transfers);
+        }
+        $this->entityManager->flush();
+
+        $component = $this->createLiveComponent(SeriesSuggestion::class, ['series' => $series], $this->client)->actingAs($this->user);
+        // All filed as transfers: so is the series, until the user says otherwise
+        self::assertSame('Transfers', $component->render()->crawler()->filter('select option[selected]')->text());
+
+        $component->submitForm([\sprintf('series_%d', $series->getId()) => ['name' => 'Rent', 'category' => (string) $rent->getId()]], 'confirm');
+
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->clear();
+        $occurrences = $entityManager->getRepository(Transaction::class)->findBy(['recurringSeries' => $series->getId()]);
+        self::assertCount(2, $occurrences);
+        foreach ($occurrences as $transaction) {
+            self::assertNull($transaction->getCategory());
+            self::assertSame('Rent', $transaction->getEffectiveCategory()?->getName());
+        }
     }
 
     public function testNothingToReview(): void

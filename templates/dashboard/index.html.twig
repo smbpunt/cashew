@@ -147,6 +147,9 @@
                                         {% if transaction.kind.value == 'deferred_card_purchase' %}
                                             <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
                                         {% endif %}
+                                        {% if transaction.internalTransfer %}
+                                            <twig:Badge variant="secondary" data-internal-transfer>{{ 'dashboard.detail.internal_transfer'|trans }}</twig:Badge>
+                                        {% endif %}
                                     </dl>
                                 </div>
                                 <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />

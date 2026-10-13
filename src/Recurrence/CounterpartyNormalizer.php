@@ -32,6 +32,11 @@ final class CounterpartyNormalizer
         'august', 'aug', 'september', 'sep', 'october', 'oct', 'november', 'nov', 'december', 'dec',
     ];
 
+    /**
+     * Under it, a token with digits is a date, a time or an amount rather than a reference.
+     */
+    private const int MIN_REFERENCE_LENGTH = 6;
+
     private static ?\Transliterator $transliterator = null;
 
     /**
@@ -83,11 +88,33 @@ final class CounterpartyNormalizer
     }
 
     /**
+     * The references of the whole label that may tell a contract or a mandate: "Contrat AU856955-260820261945979" holds
+     * "au856955" and "260820261945979". Too short to be more than a date or an amount, "12/09" and "2025" hold none.
+     *
+     * @return list<string> in the order of the label, each once
+     */
+    public function references(string $label): array
+    {
+        return array_values(array_unique(array_filter(
+            self::tokens($label),
+            static fn (string $token): bool => \strlen($token) >= self::MIN_REFERENCE_LENGTH && preg_match_all('/\d/', $token) >= 2,
+        )));
+    }
+
+    /**
+     * The whole label in lowercase words, accents and punctuation aside: "Virement à : Hélène" is "virement a helene".
+     */
+    public function words(string $label): string
+    {
+        return implode(' ', self::tokens($label));
+    }
+
+    /**
      * A name to show for the counterparty, until the user gives a better one.
      */
-    public function name(string $counterparty): string
+    public function name(string $counterparty, string $reference = ''): string
     {
-        return ucwords($counterparty);
+        return ucwords($counterparty).('' === $reference ? '' : ' · '.strtoupper($reference));
     }
 
     /**

@@ -83,6 +83,7 @@ final readonly class CategorySeeder
         private TranslatorInterface $translator,
         private EntityManagerInterface $entityManager,
         private CategoryRepository $categories,
+        private TransferCategory $transfers,
         /** @var list<string> */
         #[Autowire(param: 'kernel.enabled_locales')]
         private array $locales,
@@ -138,7 +139,35 @@ final readonly class CategorySeeder
                 $this->create($owner, $child, $parent);
             }
         }
+        $this->transfers->of($owner);
         $owner->markCategoriesSeeded();
+
+        $this->entityManager->flush();
+    }
+
+    /**
+     * Names the default categories in that language, those the user didn't rename only: "Home" becomes "Maison", "My
+     * flat" stays. Not if one next to it has that name already. Flushes.
+     */
+    public function translate(User $owner, string $locale): void
+    {
+        $categories = $this->categories->findBy(['owner' => $owner]);
+        foreach ($categories as $category) {
+            if (null === $key = $category->getDefaultKey()) {
+                continue;
+            }
+
+            $names = array_map(fn (string $l): string => $this->translator->trans('category.defaults.'.$key, locale: $l), $this->locales);
+            $name = $this->translator->trans('category.defaults.'.$key, locale: $locale);
+            if (!\in_array($category->getName(), $names, true) || $name === $category->getName()) {
+                continue;
+            }
+
+            $taken = array_any($categories, static fn (Category $other): bool => $other->getParent() === $category->getParent() && $other->getName() === $name);
+            if (!$taken) {
+                $category->setName($name);
+            }
+        }
 
         $this->entityManager->flush();
     }
@@ -148,7 +177,8 @@ final readonly class CategorySeeder
         $category = new Category($owner)
             ->setName($this->translator->trans('category.defaults.'.$key))
             ->setIcon(self::ICONS[$key])
-            ->setParent($parent);
+            ->setParent($parent)
+            ->setDefaultKey($key);
         $this->entityManager->persist($category);
 
         return $category;

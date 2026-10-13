@@ -62,6 +62,39 @@
     </section>
 {% endif %}
 
+{% if transfers is not empty %}
+    <section aria-labelledby="transfers">
+        <twig:Card class="gap-0 py-0">
+            <div class="flex flex-col gap-1 border-b px-4 py-3 sm:px-6">
+                <h2 id="transfers" class="font-semibold">{{ 'review.transfers.title'|trans({count: transfers|length}) }}</h2>
+                <p class="text-sm text-muted-foreground">{{ 'review.transfers.description'|trans({name: (transfers|first).category.name}) }}</p>
+            </div>
+            <ul class="divide-y">
+                {% for transaction in transfers %}
+                    <li class="flex items-start gap-4 px-4 py-3 sm:px-6" data-transfer>
+                        <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">
+                            {{- transaction.date|format_date(pattern: 'd MMM') -}}
+                        </time>
+                        <div class="flex min-w-0 flex-1 flex-col gap-1">
+                            <p class="text-sm font-medium break-words">{{ transaction.oneLineLabel }}</p>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>{{ transaction.account.label }}</span>
+                                {% if transaction.internalTransfer %}
+                                    <twig:Badge variant="secondary" data-internal>{{ 'review.transfers.internal'|trans }}</twig:Badge>
+                                {% else %}
+                                    <twig:Badge variant="outline">{{ 'review.transfers.external'|trans }}</twig:Badge>
+                                {% endif %}
+                                <twig:TransactionCategory :transaction="transaction" key="transfer-category-{{ transaction.id }}" />
+                            </div>
+                        </div>
+                        <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
+                    </li>
+                {% endfor %}
+            </ul>
+        </twig:Card>
+    </section>
+{% endif %}
+
 <twig:PendingSeries />
 
 <section aria-labelledby="new-category">

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\CategoryRole;
 use App\Repository\CategoryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -16,6 +17,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  */
 #[ORM\Entity(repositoryClass: CategoryRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_CATEGORY_NAME', fields: ['owner', 'parent', 'name'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_CATEGORY_ROLE', fields: ['owner', 'role'])]
 #[UniqueEntity(fields: ['owner', 'parent', 'name'], message: 'category.name.taken', errorPath: 'name', ignoreNull: false)]
 class Category
 {
@@ -38,6 +40,18 @@ class Category
     #[Assert\Length(max: 64)]
     #[Assert\Regex(pattern: self::ICON_PATTERN, message: 'category.icon.invalid')]
     private ?string $icon = null;
+
+    /**
+     * What the application relies on it for, if anything: then it's a system category, that can't be deleted.
+     */
+    #[ORM\Column(nullable: true, enumType: CategoryRole::class)]
+    private ?CategoryRole $role = null;
+
+    /**
+     * The key of the default category it was created as, "energy" for instance; null for those the user made.
+     */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $defaultKey = null;
 
     #[ORM\ManyToOne(inversedBy: 'children')]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
@@ -103,6 +117,38 @@ class Category
     public function getDisplayIcon(): ?string
     {
         return $this->icon ?? $this->parent?->getIcon();
+    }
+
+    public function getRole(): ?CategoryRole
+    {
+        return $this->role;
+    }
+
+    public function setRole(?CategoryRole $role): static
+    {
+        $this->role = $role;
+
+        return $this;
+    }
+
+    public function getDefaultKey(): ?string
+    {
+        return $this->defaultKey;
+    }
+
+    public function setDefaultKey(?string $defaultKey): static
+    {
+        $this->defaultKey = $defaultKey;
+
+        return $this;
+    }
+
+    /**
+     * Whether the application relies on it: the user may rename it, not delete it nor put it in another one.
+     */
+    public function isSystem(): bool
+    {
+        return null !== $this->role;
     }
 
     public function getParent(): ?self
@@ -171,7 +217,7 @@ class Category
             return;
         }
 
-        if ($this->parent === $this || $this->parent->getOwner() !== $this->owner) {
+        if ($this->parent === $this || $this->parent->getOwner() !== $this->owner || $this->isSystem()) {
             $context->buildViolation('category.parent.invalid')->atPath('parent')->addViolation();
         } elseif (null !== $this->parent->getParent() || !$this->children->isEmpty()) {
             $context->buildViolation('category.parent.too_deep')->atPath('parent')->addViolation();

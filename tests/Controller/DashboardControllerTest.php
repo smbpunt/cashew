@@ -7,6 +7,7 @@ use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Bank;
+use App\Enum\CategoryRole;
 use App\Enum\Periodicity;
 use App\Enum\TransactionKind;
 use App\Tests\EntityFactoryTrait;
@@ -211,6 +212,31 @@ final class DashboardControllerTest extends WebTestCase
         );
         self::assertSelectorTextContains('[data-fixed-charges]', '€19.99');
         self::assertSelectorExists(\sprintf('[data-categories] a[href="/categories/%d?month=2026-09"]', $home->getId()));
+    }
+
+    public function testMoneyMovedBetweenTheAccountsOfTheUserIsListedButNeitherEarnedNorSpent(): void
+    {
+        $this->createTransactions();
+        $transfers = $this->createCategory($this->user, 'Transfers')->setRole(CategoryRole::Transfers);
+        $transactions = $this->entityManager->getRepository(Transaction::class);
+        $bank = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"])?->getAccount() ?? throw new \LogicException('No account.');
+        $revolut = $transactions->findOneBy(['label' => 'Cinéma'])?->getAccount() ?? throw new \LogicException('No account.');
+        foreach ([[$bank, "Virement émis\nVIR INST vers Revolut", -20000], [$revolut, 'Paiement envoyé par ALICE', 20000]] as [$account, $label, $amount]) {
+            $side = $this->createTransaction($account, '2026-09-20', $label, $amount);
+            $side->markAsInternalTransfer();
+            $side->categorize($transfers);
+        }
+        // To someone else: spent
+        $this->createTransaction($revolut, '2026-09-21', 'To BAPTISTE C', -3500)->categorize($transfers);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/dashboard?month=2026-09&mode=detailed');
+
+        self::assertSame(['Income €2,500.00', 'Spending €132.39', 'Balance +€2,367.61'], $crawler->filter('dl[data-currency] > div')->each(
+            static fn ($tile): string => (string) preg_replace('/\s+/u', ' ', trim($tile->text())),
+        ));
+        self::assertSelectorTextContains('[data-categories="EUR"]', 'Transfers -€35.00');
+        self::assertSelectorCount(2, '[data-internal-transfer]');
     }
 
     #[TestWith(['simple'])]

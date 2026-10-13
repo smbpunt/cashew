@@ -2,6 +2,7 @@
 
 namespace App\Statement;
 
+use App\Category\TransferCategory;
 use App\Entity\StatementImport;
 use App\Entity\User;
 use App\Message\ImportStatement;
@@ -23,6 +24,7 @@ final readonly class StatementUploader
         private EntityManagerInterface $entityManager,
         private MessageBusInterface $bus,
         private ClockInterface $clock,
+        private TransferCategory $transfers,
     ) {
     }
 
@@ -39,6 +41,8 @@ final readonly class StatementUploader
 
         $import = new StatementImport($owner, $file->getClientOriginalName(), $this->storage->store($file), $checksum, $this->clock->now());
         $this->entityManager->persist($import);
+        // Named in the user's language, which the worker doesn't know, before the import files transfers in it
+        $this->transfers->of($owner);
         $this->entityManager->flush();
 
         $this->bus->dispatch(new ImportStatement((int) $import->getId()));

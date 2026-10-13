@@ -171,6 +171,63 @@ final class RecurrenceDetectorTest extends KernelTestCase
         self::assertSame('2026-09-04', $series->getLastSeenOn()->format('Y-m-d'));
     }
 
+    public function testTwoContractsOfTheSameCounterpartyAreTwoSeries(): void
+    {
+        foreach (['07', '08', '09'] as $month) {
+            $this->addGenerali($month);
+        }
+
+        $series = $this->detect();
+
+        self::assertSame([
+            ['Generali Iard Sa Generali Contrat · AU856955', 'au856955', -1927],
+            ['Generali Iard Sa Generali Contrat · AV027072', 'av027072', -4119],
+        ], array_map(static fn (RecurringSeries $series): array => [$series->getName(), $series->getReference(), $series->getTypicalAmount()], $series));
+        self::assertSame(3, $this->countAttached($series[0]));
+        self::assertSame(3, $this->countAttached($series[1]));
+    }
+
+    public function testASuggestionOfTwoContractsAsOneGivesWayToOnePerContract(): void
+    {
+        foreach (['07', '08', '09'] as $month) {
+            $this->addGenerali($month);
+        }
+        $this->entityManager->flush();
+        // As the detection suggested it before it told contracts apart
+        $whole = new RecurringSeries($this->account, 'generali iard sa generali contrat', false, 'Generali', Periodicity::Monthly, -1927, 70, new \DateTimeImmutable('2026-09-07'));
+        $this->entityManager->persist($whole);
+        foreach ($this->entityManager->getRepository(Transaction::class)->findAll() as $transaction) {
+            $transaction->attachTo($whole);
+        }
+
+        $series = $this->detect();
+
+        self::assertSame(['au856955', 'av027072'], array_map(static fn (RecurringSeries $series): string => $series->getReference(), $series));
+        self::assertSame(3, $this->countAttached($series[0]));
+        self::assertSame(3, $this->countAttached($series[1]));
+    }
+
+    public function testASeriesOfTwoContractsTheUserConfirmedStaysOne(): void
+    {
+        foreach (['07', '08'] as $month) {
+            $this->addGenerali($month);
+        }
+        $this->entityManager->flush();
+        $whole = new RecurringSeries($this->account, 'generali iard sa generali contrat', false, 'Generali', Periodicity::Monthly, -1927, 70, new \DateTimeImmutable('2026-08-07'));
+        $whole->confirm('Generali', null);
+        $this->entityManager->persist($whole);
+        foreach ($this->entityManager->getRepository(Transaction::class)->findAll() as $transaction) {
+            $transaction->attachTo($whole);
+        }
+
+        $this->addGenerali('09');
+        $series = $this->detect();
+
+        self::assertCount(1, $series);
+        self::assertSame('', $series[0]->getReference());
+        self::assertSame(6, $this->countAttached($series[0]));
+    }
+
     /**
      * @return list<RecurringSeries> by name
      */
@@ -186,6 +243,15 @@ final class RecurrenceDetectorTest extends KernelTestCase
     private function add(string $date, string $label, int $amount): void
     {
         $this->createTransaction($this->account, $date, $label, $amount);
+    }
+
+    /**
+     * Two insurance contracts, debited the same day.
+     */
+    private function addGenerali(string $month): void
+    {
+        $this->add("2026-$month-07", "Prélèvement\nGENERALI IARD SA - Generali - Contrat AU856955-26{$month}20261945979\nFR7611306000474815308160605\nFR62ZZZ008982\nTIGR26{$month}2026I90777", -1927);
+        $this->add("2026-$month-07", "Prélèvement\nGENERALI IARD SA - Generali - Contrat AV027072-26{$month}20261945980\nFR7611306000474815308160605\nFR62ZZZ008982\nTIGR26{$month}2026I90778", -4119);
     }
 
     private function findOne(string $date): Transaction

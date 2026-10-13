@@ -136,6 +136,19 @@ class Transaction
         $this->kind = TransactionKind::DeferredCardSettlement;
     }
 
+    /**
+     * One side of money moved between two of the user's accounts: it leaves the totals.
+     */
+    public function markAsInternalTransfer(): void
+    {
+        $this->kind = TransactionKind::InternalTransfer;
+    }
+
+    public function isInternalTransfer(): bool
+    {
+        return TransactionKind::InternalTransfer === $this->kind;
+    }
+
     public function getBankCategory(): ?string
     {
         return $this->bankCategory;

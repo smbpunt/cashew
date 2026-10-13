@@ -19,7 +19,10 @@
                 {{ form_errors(form.icon) }}
             </div>
             {% do form.icon.setRendered %}
-            {{ form_row(form.parent) }}
+            {# A system category has no say in it, and form.parent would be the parent view then #}
+            {% if form.children.parent is defined %}
+                {{ form_row(form.children.parent) }}
+            {% endif %}
             {{ form_rest(form) }}
             <div class="flex gap-2">
                 <twig:Button type="submit">{{ 'category.edit.submit'|trans }}</twig:Button>
@@ -27,13 +30,17 @@
             </div>
         {{ form_end(form) }}
 
-        <form method="post" action="{{ path('app_category_delete', {id: category.id}) }}" class="flex flex-wrap items-center justify-between gap-3 border-t pt-4"
-            data-turbo-confirm="{{ 'category.delete.confirm'|trans({name: category.name}) }}"
-        >
-            <p class="text-sm text-muted-foreground">{{ 'category.delete.description'|trans({count: category.children|length}) }}</p>
-            <input type="hidden" name="_token" value="{{ csrf_token('delete-category-' ~ category.id) }}">
-            <twig:Button type="submit" variant="destructive" size="sm">{{ 'category.delete.submit'|trans }}</twig:Button>
-        </form>
+        {% if is_granted('CATEGORY_DELETE', category) %}
+            <form method="post" action="{{ path('app_category_delete', {id: category.id}) }}" class="flex flex-wrap items-center justify-between gap-3 border-t pt-4"
+                data-turbo-confirm="{{ 'category.delete.confirm'|trans({name: category.name}) }}"
+            >
+                <p class="text-sm text-muted-foreground">{{ 'category.delete.description'|trans({count: category.children|length}) }}</p>
+                <input type="hidden" name="_token" value="{{ csrf_token('delete-category-' ~ category.id) }}">
+                <twig:Button type="submit" variant="destructive" size="sm">{{ 'category.delete.submit'|trans }}</twig:Button>
+            </form>
+        {% else %}
+            <p class="border-t pt-4 text-sm text-muted-foreground" data-system-category>{{ 'category.delete.system'|trans }}</p>
+        {% endif %}
     </twig:Card:Content>
 </twig:Card>
 {% endblock %}

@@ -50,6 +50,10 @@ final readonly class CategoryHistoryBuilder
         $amounts = [];
         $empty = array_fill_keys(array_map(static fn (\DateTimeImmutable $month): string => $month->format('Y-m'), $months), 0);
         foreach ($transactions as $transaction) {
+            // Listed, but neither spent nor earned
+            if ($transaction->isInternalTransfer()) {
+                continue;
+            }
             $amounts[$transaction->getCurrency()] ??= $empty;
             $amounts[$transaction->getCurrency()][$transaction->getDate()->format('Y-m')] += $transaction->getAmount();
         }

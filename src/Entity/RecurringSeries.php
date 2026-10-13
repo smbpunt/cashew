@@ -9,11 +9,11 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Transactions of an account that come back with the same counterparty, on a regular basis: a subscription, a
+ * Transactions of an account that come back with the same counterparty, and contract if it has several, on a regular basis: a subscription, a
  * salary, a loan... Detected on each import, then reviewed by the user.
  */
 #[ORM\Entity(repositoryClass: RecurringSeriesRepository::class)]
-#[ORM\UniqueConstraint(name: 'UNIQ_RECURRING_SERIES_COUNTERPARTY', fields: ['account', 'counterparty', 'income'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_RECURRING_SERIES_COUNTERPARTY', fields: ['account', 'counterparty', 'reference', 'income'])]
 class RecurringSeries
 {
     #[ORM\Id]
@@ -58,6 +58,11 @@ class RecurringSeries
         private int $confidence,
         #[ORM\Column(type: Types::DATE_IMMUTABLE)]
         private \DateTimeImmutable $lastSeenOn,
+        /**
+         * The contract it's of, when the counterparty has several at once, as ReferenceSplitter tells it; empty otherwise.
+         */
+        #[ORM\Column(length: 64, options: ['default' => ''])]
+        private string $reference = '',
     ) {
     }
 
@@ -79,6 +84,11 @@ class RecurringSeries
     public function getCounterparty(): string
     {
         return $this->counterparty;
+    }
+
+    public function getReference(): string
+    {
+        return $this->reference;
     }
 
     public function isIncome(): bool

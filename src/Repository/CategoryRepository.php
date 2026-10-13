@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Category;
 use App\Entity\User;
+use App\Enum\CategoryRole;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -34,8 +35,17 @@ class CategoryRepository extends ServiceEntityRepository
             ->getResult());
     }
 
+    /**
+     * Whether the owner has categories of their own, the system ones aside: "Transfers" alone is no reason not to
+     * offer them the default ones.
+     */
     public function hasAny(User $owner): bool
     {
-        return 0 < $this->count(['owner' => $owner]);
+        return 0 < $this->count(['owner' => $owner, 'role' => null]);
+    }
+
+    public function findByRole(User $owner, CategoryRole $role): ?Category
+    {
+        return $this->findOneBy(['owner' => $owner, 'role' => $role]);
     }
 }

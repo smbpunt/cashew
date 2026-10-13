@@ -48,7 +48,7 @@ services:
       php:
         condition: service_healthy
     restart: unless-stopped
-  # Restart it after changing the code it runs: "docker compose restart worker"
+  # Stops itself once the code it runs changes (StopWorkerOnStaleContainer), to be restarted on the new code
   worker:
     # Same image as php, which builds it
     image: ${IMAGES_PREFIX:-}app-php-dev

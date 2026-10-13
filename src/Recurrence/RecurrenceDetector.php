@@ -13,8 +13,9 @@ use App\Repository\TransactionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Finds the transactions that come back: the user's transactions are grouped by account, counterparty and direction;
- * those of a known series join it, and the groups that look recurring are suggested for the user to review.
+ * Finds the transactions that come back: the user's transactions are grouped by account, counterparty and direction,
+ * then by contract when the counterparty has several at once; those of a known series join it, and the groups that
+ * look recurring are suggested for the user to review.
  */
 final readonly class RecurrenceDetector
 {
@@ -34,6 +35,7 @@ final readonly class RecurrenceDetector
         private RecurringSeriesRepository $series,
         private CounterpartyNormalizer $normalizer,
         private SeriesAnalyzer $analyzer,
+        private ReferenceSplitter $splitter,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -47,7 +49,7 @@ final readonly class RecurrenceDetector
         /** @var array<string, RecurringSeries> $known */
         $known = [];
         foreach ($this->series->findOwned($owner) as $series) {
-            $known[self::key($series->getAccount(), $series->getCounterparty(), $series->isIncome())] = $series;
+            $known[self::key($series->getAccount(), $series->getCounterparty(), $series->isIncome(), $series->getReference())] = $series;
         }
 
         /** @var array<string, array{account: BankAccount, counterparty: string, income: bool, transactions: list<Transaction>}> $groups */
@@ -69,55 +71,93 @@ final readonly class RecurrenceDetector
         }
 
         foreach ($groups as $key => $group) {
-            $series = $known[$key] ?? null;
-            if (SeriesStatus::Rejected === $series?->getStatus()) {
-                continue;
+            foreach ($this->contractsOf($group['transactions'], $known[$key] ?? null) as $reference => $transactions) {
+                $this->detectIn($group['account'], $group['counterparty'], $group['income'], (string) $reference, $transactions, $known, $lastDates[spl_object_id($group['account'])]);
+            }
+        }
+    }
+
+    /**
+     * The transactions of a counterparty by contract. Unless the user reviewed them as one series already: then
+     * they stay one, as the user took them. A suggestion of them as one gives way to those of each contract.
+     *
+     * @param list<Transaction> $transactions
+     *
+     * @return array<string, list<Transaction>>
+     */
+    private function contractsOf(array $transactions, ?RecurringSeries $whole): array
+    {
+        if (null !== $whole && SeriesStatus::Suggested !== $whole->getStatus()) {
+            return ['' => $transactions];
+        }
+
+        $contracts = $this->splitter->split($transactions);
+        if (null !== $whole && [''] !== array_keys($contracts)) {
+            // Before the contracts take its transactions: those of a series join no other
+            $this->remove($whole, $transactions);
+        }
+
+        return $contracts;
+    }
+
+    /**
+     * @param list<Transaction>              $transactions of the same account, counterparty, direction and contract, oldest first
+     * @param array<string, RecurringSeries> $known
+     */
+    private function detectIn(BankAccount $account, string $counterparty, bool $income, string $reference, array $transactions, array $known, \DateTimeImmutable $lastDate): void
+    {
+        $series = $known[self::key($account, $counterparty, $income, $reference)] ?? null;
+        // The suggestion of the whole counterparty, removed for those of its contracts
+        if (null !== $series && !$this->entityManager->contains($series)) {
+            $series = null;
+        }
+        if (SeriesStatus::Rejected === $series?->getStatus()) {
+            return;
+        }
+
+        if (null === $series) {
+            $analysis = $this->analyzer->analyze($transactions);
+            if (null === $analysis) {
+                return;
             }
 
-            $lastDate = $lastDates[spl_object_id($group['account'])];
-
-            if (null === $series) {
-                $analysis = $this->analyzer->analyze($group['transactions']);
-                if (null === $analysis) {
-                    continue;
-                }
-
-                // Its purchases aside, a shop may well have a subscription
-                $members = self::membersOf($group['transactions'], null, $analysis->typicalAmount, $analysis->periodicity);
-                $analysis = $this->analyzer->analyze($members);
-                if (!$this->isWorthSuggesting($analysis, $lastDate)) {
-                    continue;
-                }
-
-                $series = new RecurringSeries(
-                    $group['account'],
-                    $group['counterparty'],
-                    $group['income'],
-                    $this->normalizer->name($group['counterparty']),
-                    $analysis->periodicity,
-                    $analysis->typicalAmount,
-                    $analysis->confidence,
-                    $analysis->lastSeenOn,
-                );
-                $this->entityManager->persist($series);
-            } else {
-                $members = self::membersOf($group['transactions'], $series, $series->getTypicalAmount(), $series->getPeriodicity());
-                $analysis = $this->analyzer->analyze($members);
-
-                // No longer recurring, or no longer going on: unless the user confirmed it, it's no longer a suggestion
-                if (SeriesStatus::Suggested === $series->getStatus() && !$this->isWorthSuggesting($analysis, $lastDate)) {
-                    $this->remove($series, $group['transactions']);
-                    continue;
-                }
-
-                if (null !== $analysis) {
-                    $series->refresh($analysis->periodicity, $analysis->typicalAmount, $analysis->confidence, $analysis->lastSeenOn);
-                }
+            // Its purchases aside, a shop may well have a subscription
+            $members = self::membersOf($transactions, null, $analysis->typicalAmount, $analysis->periodicity);
+            $analysis = $this->analyzer->analyze($members);
+            if (!$this->isWorthSuggesting($analysis, $lastDate)) {
+                return;
             }
 
-            foreach ($members as $transaction) {
-                $transaction->attachTo($series);
+            $series = new RecurringSeries(
+                $account,
+                $counterparty,
+                $income,
+                $this->normalizer->name($counterparty, $reference),
+                $analysis->periodicity,
+                $analysis->typicalAmount,
+                $analysis->confidence,
+                $analysis->lastSeenOn,
+                $reference,
+            );
+            $this->entityManager->persist($series);
+        } else {
+            $members = self::membersOf($transactions, $series, $series->getTypicalAmount(), $series->getPeriodicity());
+            $analysis = $this->analyzer->analyze($members);
+
+            // No longer recurring, or no longer going on: unless the user confirmed it, it's no longer a suggestion
+            if (SeriesStatus::Suggested === $series->getStatus() && !$this->isWorthSuggesting($analysis, $lastDate)) {
+                $this->remove($series, $transactions);
+
+                return;
             }
+
+            if (null !== $analysis) {
+                $series->refresh($analysis->periodicity, $analysis->typicalAmount, $analysis->confidence, $analysis->lastSeenOn);
+            }
+        }
+
+        foreach ($members as $transaction) {
+            $transaction->attachTo($series);
         }
     }
 
@@ -179,8 +219,8 @@ final readonly class RecurrenceDetector
         return array_values(array_filter($transactions, static fn (int $i): bool => $isMember[$i], \ARRAY_FILTER_USE_KEY));
     }
 
-    private static function key(BankAccount $account, string $counterparty, bool $income): string
+    private static function key(BankAccount $account, string $counterparty, bool $income, string $reference = ''): string
     {
-        return implode("\0", [spl_object_id($account), $counterparty, (int) $income]);
+        return implode("\0", [spl_object_id($account), $counterparty, (int) $income, $reference]);
     }
 }

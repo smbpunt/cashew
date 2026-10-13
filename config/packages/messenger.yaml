@@ -6,6 +6,10 @@ framework:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    # A message taken by a worker that died is taken again after 10 min, instead of an hour:
+                    # longer than any import, whose lock (ImportStatementHandler) lasts as long
+                    redeliver_timeout: 600
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2

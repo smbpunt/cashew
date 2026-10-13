@@ -51,6 +51,7 @@ dashboard:
         no_category: None
         from_series: '{category} (recurring)'
         deferred_card_purchase: Deferred debit card
+        internal_transfer: Internal transfer
     categories:
         title: By category
         fixed_charges: 'Fixed charges:'
@@ -92,6 +93,11 @@ review:
         occurrences: '{count, plural, one {# occurrence} other {# occurrences}}, the last one on {last}'
         confirm: Confirm
         reject: Not recurring
+    transfers:
+        title: '{count, plural, one {A transfer} other {# transfers}}'
+        description: 'Filed in "{name}". Those between your accounts are left out of income and spending; those to someone else count as spending. File one elsewhere if it''s something else, like rent.'
+        internal: Between your accounts
+        external: To someone else
     categories:
         title: Categories
         description: 'Group what you spend on: Home, with its energy, water and loan…'
@@ -134,6 +140,7 @@ category:
         description: '{count, plural, =0 {Its transactions will be left without a category.} one {Its subcategory goes with it; their transactions will be left without a category.} other {Its # subcategories go with it; their transactions will be left without a category.}}'
         confirm: 'Delete "{name}"?'
         submit: Delete
+        system: 'The application files transfers in it: it can be renamed, not deleted.'
     seed:
         description: Start from a first set of categories (Home, Income, Subscriptions…), to adapt as you like.
         submit: Create suggested categories
@@ -185,6 +192,7 @@ category:
         salary: Salary
         benefits: Benefits
         refunds: Refunds
+        transfers: Transfers
 
 security:
     log_out: log out

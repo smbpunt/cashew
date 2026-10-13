@@ -18,8 +18,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ReviewController extends AbstractController
 {
     /**
-     * What the imports asked for brought, then the recurring series waiting for a review, and the categories to file
-     * them in.
+     * What the imports asked for brought, the transfers among it, then the recurring series waiting for a review, and
+     * the categories to file them in.
      *
      * @param list<int> $imports the imports just done, if any
      */
@@ -41,6 +41,7 @@ final class ReviewController extends AbstractController
             // From the first day of all the imports to their last
             'period' => [] === $periods ? null : [min(array_column($periods, 0)), max(array_column($periods, 1))],
             'amount_changes' => $amountChanges->find($imports),
+            'transfers' => $transactions->findTransfersImportedBy($imports),
             'has_categories' => $categories->hasAny($user),
         ]);
     }

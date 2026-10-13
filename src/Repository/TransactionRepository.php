@@ -7,6 +7,7 @@ use App\Entity\Category;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
+use App\Enum\CategoryRole;
 use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
 use App\Report\Month;
@@ -156,6 +157,58 @@ class TransactionRepository extends ServiceEntityRepository
             ->setParameter('imports', $imports)
             ->orderBy('t.date', 'ASC')
             ->addOrderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * The owner's regular transactions within the period, both days included, with their account and series: those
+     * that may be one side of money moved between two of their accounts.
+     *
+     * @return list<Transaction>
+     */
+    public function findForTransfers(User $owner, \DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        return $this->createQueryBuilder('t')
+            ->addSelect('a', 's')
+            ->join('t.account', 'a')
+            ->leftJoin('t.recurringSeries', 's')
+            ->where('a.owner = :owner')
+            ->andWhere('t.kind = :regular')
+            ->andWhere('t.date >= :start')
+            ->andWhere('t.date <= :end')
+            ->setParameter('owner', $owner)
+            ->setParameter('regular', TransactionKind::Regular)
+            ->setParameter('start', $start, Types::DATE_IMMUTABLE)
+            ->setParameter('end', $end, Types::DATE_IMMUTABLE)
+            ->orderBy('t.date', 'ASC')
+            ->addOrderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * What the imports brought that's filed in the "Transfers" category, most recent first.
+     *
+     * @param list<StatementImport> $imports
+     *
+     * @return list<Transaction>
+     */
+    public function findTransfersImportedBy(array $imports): array
+    {
+        if ([] === $imports) {
+            return [];
+        }
+
+        return $this->withCategories($this->createQueryBuilder('t'))
+            ->addSelect('a')
+            ->join('t.account', 'a')
+            ->where('t.statementImport IN (:imports)')
+            ->andWhere('c.role = :transfers')
+            ->setParameter('imports', $imports)
+            ->setParameter('transfers', CategoryRole::Transfers)
+            ->orderBy('t.date', 'DESC')
+            ->addOrderBy('t.id', 'DESC')
             ->getQuery()
             ->getResult();
     }
