@@ -1,7 +1,7 @@
 {%- props
-    ## list<\DateTimeImmutable> The first day of each month, oldest first.
+    ## list<App\Time\Month> Oldest first.
     months,
-    ## array<string, int> In minor units (cents), by month ("Y-m"), every month there.
+    ## array<string, int> In minor units (cents), by month key ("2026-09"), every month there.
     amounts,
     ## string ISO 4217 code.
     currency,
@@ -9,7 +9,7 @@
     max,
     ## int A dashed line at that amount; none at 0.
     average = 0,
-    ## \DateTimeImmutable The month to highlight.
+    ## App\Time\Month The month to highlight.
     selected,
     ## string|null The route each column leads to, with the month in its query; no links without it.
     route = null,
@@ -24,10 +24,10 @@
         <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 border-t border-dashed border-muted-foreground/50" style="bottom: {{ (average|abs / max * 100)|round(2) }}%"></div>
     {% endif %}
     {% for month in months %}
-        {% set key = month|date('Y-m') %}
+        {% set key = month.key %}
         {% set amount = amounts[key] %}
-        {% set current = key == selected|date('Y-m') %}
-        {% set title = month|format_date(pattern: 'LLLL y')|capitalize ~ ' : ' ~ amount|major_units(currency)|format_currency(currency) %}
+        {% set current = month.equals(selected) %}
+        {% set title = month|month_name ~ ' : ' ~ amount|major_units(currency)|format_currency(currency) %}
         {% set tag = route ? 'a' : 'div' %}
         <{{ tag }} role="listitem" {% if route %}href="{{ path(route, params|merge({month: key})) }}" {% else %}tabindex="0" {% endif %}
             class="group relative flex flex-1 items-end justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -40,6 +40,6 @@
 </div>
 <div aria-hidden="true" class="mt-1 flex gap-1 text-[0.65rem] text-muted-foreground">
     {% for month in months %}
-        <span class="flex-1 truncate text-center {{ month|date('Y-m') == selected|date('Y-m') ? 'font-medium text-foreground' }}">{{ month|format_date(pattern: 'MMM') }}</span>
+        <span class="flex-1 truncate text-center {{ month.equals(selected) ? 'font-medium text-foreground' }}">{{ month.firstDay|format_date(pattern: 'MMM') }}</span>
     {% endfor %}
 </div>

@@ -4,9 +4,9 @@
 
 {% block content %}
 {% if calendar %}
-    {% set month_name = calendar.month|format_date(pattern: 'LLLL y')|capitalize %}
+    {% set month_name = calendar.month|month_name %}
     {# What the links and the forms of the page carry along: the month, and the filter #}
-    {% set query = {month: calendar.month|date('Y-m'), show: calendar.filter.value} %}
+    {% set query = {month: calendar.month.key, show: calendar.filter.value} %}
 
     <section aria-labelledby="month" class="flex flex-col gap-6">
         <div class="flex items-center justify-between gap-4">
@@ -19,7 +19,7 @@
                 ] %}
                     {% set icon %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ link.icon }}"/></svg>{% endset %}
                     {% if link.month %}
-                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_calendar', query|merge({month: link.month|date('Y-m')})) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
+                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_calendar', query|merge({month: link.month.key})) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
                     {% else %}
                         <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label|trans }}">{{ icon }}</twig:Button>
                     {% endif %}

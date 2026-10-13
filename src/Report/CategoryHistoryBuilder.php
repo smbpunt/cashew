@@ -5,6 +5,7 @@ namespace App\Report;
 use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Repository\TransactionRepository;
+use App\Time\Month;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -21,41 +22,35 @@ final readonly class CategoryHistoryBuilder
     }
 
     /**
-     * @param \DateTimeImmutable|null $month any day of the month to list the transactions of; null, or out of the
-     *                                       period, for the last one
+     * @param Month|null $month the month to list the transactions of; null, or out of the period, for the last one
      */
-    public function build(Category $category, ?\DateTimeImmutable $month = null): CategoryHistory
+    public function build(Category $category, ?Month $month = null): CategoryHistory
     {
         $owner = $category->getOwner();
         $range = $this->transactions->findDateRange($owner);
         if (null === $range) {
-            return new CategoryHistory($category, [], [], Month::firstDayOf($month ?? $this->clock->now()), []);
+            return new CategoryHistory($category, [], [], $month ?? Month::of($this->clock->now()), []);
         }
 
-        [$first, $last] = array_map(Month::firstDayOf(...), $range);
-        $start = max($first, $last->modify(\sprintf('-%d months', self::MONTHS - 1)));
+        [$first, $last] = array_map(Month::of(...), $range);
+        $start = $first->latest($last->plus(1 - self::MONTHS));
+        $months = Month::range($start, $last);
 
-        $months = [];
-        for ($current = $start; $current <= $last; $current = $current->modify('+1 month')) {
-            $months[] = $current;
-        }
-
-        $month = null === $month ? $last : Month::firstDayOf($month);
-        if ($month < $start || $month > $last) {
+        if (null === $month || $month->isBefore($start) || $month->isAfter($last)) {
             $month = $last;
         }
 
-        $transactions = $this->transactions->findInCategories($owner, [$category, ...$category->getChildren()], $start, $last->modify('+1 month'));
+        $transactions = $this->transactions->findInCategories($owner, [$category, ...$category->getChildren()], $start->firstDay(), $last->next()->firstDay());
 
         $amounts = [];
-        $empty = array_fill_keys(array_map(static fn (\DateTimeImmutable $month): string => $month->format('Y-m'), $months), 0);
+        $empty = array_fill_keys(array_map(static fn (Month $month): string => $month->key(), $months), 0);
         foreach ($transactions as $transaction) {
             // Listed, but neither spent nor earned
             if (!$transaction->countsInTotals()) {
                 continue;
             }
             $amounts[$transaction->getCurrency()] ??= $empty;
-            $amounts[$transaction->getCurrency()][$transaction->getDate()->format('Y-m')] += $transaction->getAmount();
+            $amounts[$transaction->getCurrency()][Month::of($transaction->getDate())->key()] += $transaction->getAmount();
         }
         ksort($amounts);
 
@@ -64,7 +59,7 @@ final readonly class CategoryHistoryBuilder
             $months,
             $amounts,
             $month,
-            array_values(array_filter($transactions, static fn (Transaction $transaction): bool => $transaction->getDate()->format('Y-m') === $month->format('Y-m'))),
+            array_values(array_filter($transactions, static fn (Transaction $transaction): bool => $month->contains($transaction->getDate()))),
         );
     }
 }

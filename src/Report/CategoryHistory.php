@@ -4,6 +4,7 @@ namespace App\Report;
 
 use App\Entity\Category;
 use App\Entity\Transaction;
+use App\Time\Month;
 
 /**
  * A category month by month, its subcategories included.
@@ -13,13 +14,13 @@ final readonly class CategoryHistory
     public function __construct(
         public Category $category,
         /**
-         * The first day of each month, oldest first: the last twelve with transactions.
+         * Oldest first: the last twelve with transactions.
          *
-         * @var list<\DateTimeImmutable>
+         * @var list<Month>
          */
         public array $months,
         /**
-         * In minor units (cents), negative when it's spent on: by currency, then by month ("Y-m"), every month there.
+         * In minor units (cents), negative when it's spent on: by currency, then by month key ("2026-09"), every month there.
          *
          * @var array<string, array<string, int>>
          */
@@ -27,7 +28,7 @@ final readonly class CategoryHistory
         /**
          * The month whose transactions are listed.
          */
-        public \DateTimeImmutable $month,
+        public Month $month,
         /**
          * Most recent first.
          *

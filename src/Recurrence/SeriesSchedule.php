@@ -3,6 +3,7 @@
 namespace App\Recurrence;
 
 use App\Entity\RecurringSeries;
+use App\Time\Month;
 
 /**
  * When a series comes back next, and whether it still does.
@@ -12,6 +13,16 @@ use App\Entity\RecurringSeries;
  */
 final readonly class SeriesSchedule
 {
+    /**
+     * The last day known of its account: that of its last transaction.
+     *
+     * @param array<int, \DateTimeImmutable> $lastDates the day of the last transaction of each account, by account id
+     */
+    public function knownUntil(RecurringSeries $series, array $lastDates): \DateTimeImmutable
+    {
+        return $lastDates[$series->getAccount()->getId()] ?? $series->getLastSeenOn();
+    }
+
     /**
      * Whether an occurrence it was expected to have didn't come, give or take the length of months, since its last
      * one, or since the user said it still goes on. One the user said ended no longer is.
@@ -30,18 +41,16 @@ final readonly class SeriesSchedule
     /**
      * The days it's expected within the month, after the last day known: none once it ended, or seems to have.
      *
-     * @param \DateTimeImmutable $month its first day
-     *
      * @return list<\DateTimeImmutable>
      */
-    public function occurrencesIn(RecurringSeries $series, \DateTimeImmutable $month, \DateTimeImmutable $knownUntil): array
+    public function occurrencesIn(RecurringSeries $series, Month $month, \DateTimeImmutable $knownUntil): array
     {
         if ($series->isEnded() || $this->seemsEnded($series, $knownUntil)) {
             return [];
         }
 
-        $start = $month->format('Y-m-d');
-        $end = $month->modify('last day of this month')->format('Y-m-d');
+        $start = $month->firstDay()->format('Y-m-d');
+        $end = $month->lastDay()->format('Y-m-d');
         $after = $knownUntil->format('Y-m-d');
 
         $occurrences = [];

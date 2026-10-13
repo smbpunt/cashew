@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Enum\Bank;
 use App\Enum\Periodicity;
 use App\Recurrence\SeriesSchedule;
+use App\Time\Month;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 
@@ -97,7 +98,7 @@ final class SeriesScheduleTest extends TestCase
     {
         return array_map(
             static fn (\DateTimeImmutable $day): string => $day->format('Y-m-d'),
-            $this->schedule->occurrencesIn($series, new \DateTimeImmutable($month.'-01'), new \DateTimeImmutable($knownUntil)),
+            $this->schedule->occurrencesIn($series, Month::fromKey($month), new \DateTimeImmutable($knownUntil)),
         );
     }
 

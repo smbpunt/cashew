@@ -10,12 +10,12 @@ use App\Report\CategoryHistoryBuilder;
 use App\Repository\CategoryRepository;
 use App\Security\CategoryVoter;
 use App\Security\OwnerVoter;
+use App\Time\Month;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\ValueResolver;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -47,7 +47,7 @@ final class CategoryController extends AbstractController
     public function show(
         Category $category,
         CategoryHistoryBuilder $histories,
-        #[ValueResolver('month')] ?\DateTimeImmutable $month = null,
+        ?Month $month = null,
     ): Response {
         return $this->render('category/show.html.twig', [
             'history' => $histories->build($category, $month),

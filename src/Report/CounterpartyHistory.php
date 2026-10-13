@@ -3,6 +3,7 @@
 namespace App\Report;
 
 use App\Entity\Transaction;
+use App\Time\Month;
 
 /**
  * A transaction among the others of its counterparty: those of its series once the user confirmed it, or else those
@@ -19,19 +20,27 @@ final readonly class CounterpartyHistory
          */
         public array $occurrences,
         /**
-         * The first day of each month, oldest first: twelve at most, since the first occurrence, up to the last month
-         * with transactions; that of the transaction among them.
+         * Oldest first: twelve at most, since the first occurrence, up to the last month with transactions; that of the
+         * transaction among them.
          *
-         * @var list<\DateTimeImmutable>
+         * @var list<Month>
          */
         public array $months,
         /**
-         * In minor units (cents), negative for debits: by month ("Y-m"), every month there.
+         * In minor units (cents), negative for debits: by month key ("2026-09"), every month there.
          *
          * @var array<string, int>
          */
         public array $amounts,
     ) {
+    }
+
+    /**
+     * That of the transaction.
+     */
+    public function getMonth(): Month
+    {
+        return Month::of($this->transaction->getDate());
     }
 
     public function getCurrency(): string
@@ -75,10 +84,7 @@ final readonly class CounterpartyHistory
      */
     public function getPeriodMonths(): int
     {
-        $first = $this->getFirst()->getDate();
-        $last = $this->getLast()->getDate();
-
-        return ((int) $last->format('Y') - (int) $first->format('Y')) * 12 + (int) $last->format('n') - (int) $first->format('n') + 1;
+        return Month::of($this->getFirst()->getDate())->monthsUntil(Month::of($this->getLast()->getDate())) + 1;
     }
 
     /**

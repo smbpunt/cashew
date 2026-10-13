@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Enum\CategoryRole;
 use App\Enum\SeriesStatus;
 use App\Enum\TransactionKind;
-use App\Report\Month;
+use App\Time\Month;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -66,16 +66,14 @@ class TransactionRepository extends ServiceEntityRepository
      *
      * @return list<Transaction>
      */
-    public function findOfMonth(User $owner, \DateTimeImmutable $month): array
+    public function findOfMonth(User $owner, Month $month): array
     {
-        $start = Month::firstDayOf($month);
-
         return $this->withCategories($this->ownedListed($owner))
             ->addSelect('a')
             ->andWhere('t.date >= :start')
             ->andWhere('t.date < :end')
-            ->setParameter('start', $start, Types::DATE_IMMUTABLE)
-            ->setParameter('end', $start->modify('+1 month'), Types::DATE_IMMUTABLE)
+            ->setParameter('start', $month->firstDay(), Types::DATE_IMMUTABLE)
+            ->setParameter('end', $month->next()->firstDay(), Types::DATE_IMMUTABLE)
             ->orderBy('t.date', 'DESC')
             ->addOrderBy('t.id', 'DESC')
             ->getQuery()

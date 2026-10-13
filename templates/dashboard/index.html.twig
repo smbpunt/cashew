@@ -8,7 +8,7 @@
 {% endif %}
 
 {% if report %}
-    {% set month_name = report.month|format_date(pattern: 'LLLL y')|capitalize %}
+    {% set month_name = report.month|month_name %}
 
     <section aria-labelledby="month" class="flex flex-col gap-6">
         <div class="flex items-center justify-between gap-4">
@@ -21,7 +21,7 @@
                 ] %}
                     {% set icon %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ link.icon }}"/></svg>{% endset %}
                     {% if link.month %}
-                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_dashboard', {month: link.month|date('Y-m')}) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
+                        <twig:Button as="a" variant="outline" size="icon" href="{{ path('app_dashboard', {month: link.month.key}) }}" rel="{{ link.rel }}" aria-label="{{ link.label|trans }}" title="{{ link.label|trans }}">{{ icon }}</twig:Button>
                     {% else %}
                         <twig:Button variant="outline" size="icon" disabled aria-label="{{ link.label|trans }}">{{ icon }}</twig:Button>
                     {% endif %}
@@ -92,7 +92,7 @@
         {# The list changes within the frame: only it reloads, and the page keeps its scroll #}
         <turbo-frame id="transactions">
             {# The mode and the sort are remembered: what's shown isn't, and goes along #}
-            {% set query = {month: report.month|date('Y-m'), show: list.show.value == 'all' ? null : list.show.value} %}
+            {% set query = {month: report.month.key, show: list.show.value == 'all' ? null : list.show.value} %}
             {% set unidentified_only = list.show.value == 'unidentified' %}
             <twig:Card class="gap-0 py-0">
                 <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3 sm:px-6">

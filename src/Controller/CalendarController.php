@@ -6,8 +6,10 @@ use App\Calendar\CalendarBuilder;
 use App\Entity\RecurringSeries;
 use App\Entity\User;
 use App\Enum\CalendarFilter;
+use App\Recurrence\SeriesSchedule;
 use App\Repository\TransactionRepository;
 use App\Security\OwnerVoter;
+use App\Time\Month;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,7 +17,6 @@ use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
-use Symfony\Component\HttpKernel\Attribute\ValueResolver;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -34,17 +35,11 @@ final class CalendarController extends AbstractController
     public function index(
         #[CurrentUser] User $user,
         CalendarBuilder $calendars,
-        #[ValueResolver('month')] ?\DateTimeImmutable $month = null,
+        ?Month $month = null,
         #[MapQueryParameter] ?CalendarFilter $show = null,
     ): Response {
-        try {
-            $calendar = $calendars->build($user, $month, $show ?? CalendarFilter::Recurring);
-        } catch (\OutOfRangeException $exception) {
-            throw $this->createNotFoundException($exception->getMessage(), $exception);
-        }
-
         return $this->render('calendar/index.html.twig', [
-            'calendar' => $calendar,
+            'calendar' => $calendars->build($user, $month, $show ?? CalendarFilter::Recurring),
         ]);
     }
 
@@ -68,9 +63,9 @@ final class CalendarController extends AbstractController
     #[Route('/series/{id}/keep', name: 'app_calendar_series_keep', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(OwnerVoter::OWNER, 'series')]
     #[IsCsrfTokenValid(new Expression('"series-" ~ args["series"].getId()'))]
-    public function keep(RecurringSeries $series, Request $request, TransactionRepository $transactions, EntityManagerInterface $entityManager): Response
+    public function keep(RecurringSeries $series, Request $request, TransactionRepository $transactions, SeriesSchedule $schedule, EntityManagerInterface $entityManager): Response
     {
-        $series->keepActive($transactions->findLastDates($series->getOwner())[$series->getAccount()->getId()] ?? $series->getLastSeenOn());
+        $series->keepActive($schedule->knownUntil($series, $transactions->findLastDates($series->getOwner())));
         $entityManager->flush();
 
         return $this->backToCalendar($request);

@@ -4,14 +4,12 @@ namespace App\Calendar;
 
 use App\Entity\RecurringSeries;
 use App\Enum\CalendarFilter;
+use App\Time\Month;
 
 final readonly class MonthCalendar
 {
     public function __construct(
-        /**
-         * The first day of the month.
-         */
-        public \DateTimeImmutable $month,
+        public Month $month,
         public CalendarFilter $filter,
         public \DateTimeImmutable $today,
         /**
@@ -35,11 +33,11 @@ final readonly class MonthCalendar
         /**
          * Null when the month is the first with transactions.
          */
-        public ?\DateTimeImmutable $previousMonth,
+        public ?Month $previousMonth,
         /**
          * Null when the month is the last one shown ahead.
          */
-        public ?\DateTimeImmutable $nextMonth,
+        public ?Month $nextMonth,
         /**
          * The series an occurrence of went missing, for the user to tell whether they ended; only from the month in
          * progress on.
@@ -66,7 +64,7 @@ final readonly class MonthCalendar
 
     public function isInMonth(\DateTimeImmutable $day): bool
     {
-        return $day->format('Y-m') === $this->month->format('Y-m');
+        return $this->month->contains($day);
     }
 
     public function isToday(\DateTimeImmutable $day): bool

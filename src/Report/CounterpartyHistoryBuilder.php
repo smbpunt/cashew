@@ -4,6 +4,7 @@ namespace App\Report;
 
 use App\Entity\Transaction;
 use App\Repository\TransactionRepository;
+use App\Time\Month;
 
 /**
  * Finds the other transactions of a transaction's counterparty, and sums them up month by month: over the twelve months
@@ -27,24 +28,22 @@ final readonly class CounterpartyHistoryBuilder
         }
 
         $range = $this->transactions->findDateRange($transaction->getOwner());
-        $month = Month::firstDayOf($transaction->getDate());
-        $last = max($month, Month::firstDayOf($range[1] ?? $transaction->getDate()));
-        $first = Month::firstDayOf(array_last($occurrences)->getDate());
+        $month = Month::of($transaction->getDate());
+        $last = $month->latest(Month::of($range[1] ?? $transaction->getDate()));
+        $first = Month::of(array_last($occurrences)->getDate());
 
-        $start = max($first, $last->modify(\sprintf('-%d months', self::MONTHS - 1)));
-        if ($month < $start) {
+        $start = $first->latest($last->plus(1 - self::MONTHS));
+        if ($month->isBefore($start)) {
             $start = $month;
-            $last = min($last, $month->modify(\sprintf('+%d months', self::MONTHS - 1)));
+            $last = $last->earliest($month->plus(self::MONTHS - 1));
         }
 
-        $months = $amounts = [];
-        for ($current = $start; $current <= $last; $current = $current->modify('+1 month')) {
-            $months[] = $current;
-            $amounts[$current->format('Y-m')] = 0;
-        }
+        $months = Month::range($start, $last);
+        $amounts = array_fill_keys(array_map(static fn (Month $month): string => $month->key(), $months), 0);
         foreach ($occurrences as $occurrence) {
-            if (isset($amounts[$occurrence->getDate()->format('Y-m')])) {
-                $amounts[$occurrence->getDate()->format('Y-m')] += $occurrence->getAmount();
+            $key = Month::of($occurrence->getDate())->key();
+            if (isset($amounts[$key])) {
+                $amounts[$key] += $occurrence->getAmount();
             }
         }
 

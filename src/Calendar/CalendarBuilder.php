@@ -6,9 +6,10 @@ use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\CalendarFilter;
 use App\Recurrence\SeriesSchedule;
-use App\Report\Month;
 use App\Repository\RecurringSeriesRepository;
 use App\Repository\TransactionRepository;
+use App\Time\Month;
+use App\Time\MonthOutOfRangeException;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -31,13 +32,13 @@ final readonly class CalendarBuilder
     }
 
     /**
-     * @param \DateTimeImmutable|null $month any day of the month; null for the month in progress
+     * @param Month|null $month null for the month in progress
      *
      * @return MonthCalendar|null null when the user has no transactions yet
      *
-     * @throws \OutOfRangeException when the month is before the first transaction, or too far ahead
+     * @throws MonthOutOfRangeException when the month is before the first transaction, or too far ahead
      */
-    public function build(User $owner, ?\DateTimeImmutable $month = null, CalendarFilter $filter = CalendarFilter::Recurring): ?MonthCalendar
+    public function build(User $owner, ?Month $month = null, CalendarFilter $filter = CalendarFilter::Recurring): ?MonthCalendar
     {
         $range = $this->transactions->findDateRange($owner);
         if (null === $range) {
@@ -45,12 +46,12 @@ final readonly class CalendarBuilder
         }
 
         $today = $this->clock->now()->setTime(0, 0);
-        $current = Month::firstDayOf($today);
-        $first = Month::firstDayOf($range[0]);
-        $last = $current->modify(\sprintf('+%d months', self::MONTHS_AHEAD));
-        $month = Month::firstDayOf($month ?? $current);
-        if ($month->format('Y-m') < $first->format('Y-m') || $month->format('Y-m') > $last->format('Y-m')) {
-            throw new \OutOfRangeException(\sprintf('No calendar before %s or after %s.', $first->format('Y-m'), $last->format('Y-m')));
+        $current = Month::of($today);
+        $first = Month::of($range[0]);
+        $last = $current->plus(self::MONTHS_AHEAD);
+        $month ??= $current;
+        if ($month->isBefore($first) || $month->isAfter($last)) {
+            throw MonthOutOfRangeException::outside($month, $first, $last);
         }
 
         $entries = array_map(CalendarEntry::of(...), array_values(array_filter(
@@ -63,7 +64,7 @@ final readonly class CalendarBuilder
         $lastDates = $this->transactions->findLastDates($owner);
         $toCheck = $ended = [];
         foreach ($this->series->findConfirmedSpending($owner) as $series) {
-            $knownUntil = $lastDates[$series->getAccount()->getId()] ?? $series->getLastSeenOn();
+            $knownUntil = $this->schedule->knownUntil($series, $lastDates);
             if ($series->isEnded()) {
                 $ended[] = $series;
             } elseif ($this->schedule->seemsEnded($series, $knownUntil)) {
@@ -83,7 +84,7 @@ final readonly class CalendarBuilder
         }
         ksort($totals);
 
-        $upcoming = $month >= $current;
+        $upcoming = !$month->isBefore($current);
 
         return new MonthCalendar(
             $month,
@@ -92,8 +93,8 @@ final readonly class CalendarBuilder
             self::weeksOf($month),
             $entries,
             array_values($totals),
-            $month > $first ? $month->modify('-1 month') : null,
-            $month < $last ? $month->modify('+1 month') : null,
+            $month->isAfter($first) ? $month->previous() : null,
+            $month->isBefore($last) ? $month->next() : null,
             $upcoming ? $toCheck : [],
             $upcoming ? $ended : [],
         );
@@ -102,10 +103,11 @@ final readonly class CalendarBuilder
     /**
      * @return list<list<\DateTimeImmutable>>
      */
-    private static function weeksOf(\DateTimeImmutable $month): array
+    private static function weeksOf(Month $month): array
     {
-        $day = $month->modify(\sprintf('-%d days', (int) $month->format('N') - 1));
-        $end = $month->modify('last day of this month');
+        $first = $month->firstDay();
+        $day = $first->modify(\sprintf('-%d days', (int) $first->format('N') - 1));
+        $end = $month->lastDay();
 
         $weeks = [];
         while ($day <= $end) {

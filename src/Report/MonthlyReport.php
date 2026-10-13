@@ -3,14 +3,12 @@
 namespace App\Report;
 
 use App\Entity\Transaction;
+use App\Time\Month;
 
 final readonly class MonthlyReport
 {
     public function __construct(
-        /**
-         * The first day of the month.
-         */
-        public \DateTimeImmutable $month,
+        public Month $month,
         /**
          * Most recent first.
          *
@@ -26,11 +24,11 @@ final readonly class MonthlyReport
         /**
          * Null when the month is the first with transactions.
          */
-        public ?\DateTimeImmutable $previousMonth,
+        public ?Month $previousMonth,
         /**
          * Null when the month is the last with transactions.
          */
-        public ?\DateTimeImmutable $nextMonth,
+        public ?Month $nextMonth,
         /**
          * One per currency of the transactions, like the totals.
          *

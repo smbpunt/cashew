@@ -55,9 +55,9 @@
 {% if history.amounts is not empty %}
     <twig:Card class="gap-0 py-0">
         <div class="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
-            <h2 class="font-semibold">{{ history.month|format_date(pattern: 'LLLL y')|capitalize }}</h2>
+            <h2 class="font-semibold">{{ history.month|month_name }}</h2>
             {% for currency, amounts in history.amounts %}
-                <twig:Money :amount="amounts[history.month|date('Y-m')]" :currency="currency" signed class="font-semibold" />
+                <twig:Money :amount="amounts[history.month.key]" :currency="currency" signed class="font-semibold" />
             {% endfor %}
         </div>
         {% if history.transactions is empty %}

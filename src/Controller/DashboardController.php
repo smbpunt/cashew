@@ -9,10 +9,10 @@ use App\Enum\TransactionFilter;
 use App\Report\MonthlyReportBuilder;
 use App\Repository\StatementImportRepository;
 use App\Statement\Import\CutoffPolicy;
+use App\Time\Month;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
-use Symfony\Component\HttpKernel\Attribute\ValueResolver;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -33,16 +33,12 @@ final class DashboardController extends AbstractController
         StatementImportRepository $imports,
         CutoffPolicy $cutoff,
         TransactionListPreferences $preferences,
-        #[ValueResolver('month')] ?\DateTimeImmutable $month = null,
+        ?Month $month = null,
         #[MapQueryString] TransactionListQuery $query = new TransactionListQuery(),
     ): Response {
         $list = $preferences->resolve($query);
 
-        try {
-            $report = $reports->build($user, $month);
-        } catch (\OutOfRangeException $exception) {
-            throw $this->createNotFoundException($exception->getMessage(), $exception);
-        }
+        $report = $reports->build($user, $month);
 
         return $this->render('dashboard/index.html.twig', [
             'report' => $report,
