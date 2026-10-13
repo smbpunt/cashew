@@ -25,3 +25,4 @@
 ###< friendsofphp/php-cs-fixer ###
 
 docs/
+.DS_Store
