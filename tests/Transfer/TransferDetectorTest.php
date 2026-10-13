@@ -98,9 +98,30 @@ final class TransferDetectorTest extends KernelTestCase
         }
     }
 
-    public function testACreditFromSomeoneElseIsLeftAlone(): void
+    public function testACreditFromSomeoneElseIsReceivedOnATransfer(): void
     {
+        $transfers = [
+            $this->add($this->checking, '2026-08-20', "Virement en votre faveur\nVIR INST de BAPTISTE C", 3500),
+            $this->add($this->revolut, '2026-08-21', 'Paiement envoyé par MR TRISTAN AVILES', 1200),
+            $this->add($this->revolut, '2026-08-22', 'Virement de : ANTOINE GORENE', 2000),
+        ];
+
+        $this->detect();
+
+        foreach ($transfers as $transfer) {
+            // Earned all the same
+            self::assertSame(TransactionKind::Regular, $transfer->getKind());
+            self::assertSame(CategoryRole::Transfers, $transfer->getCategory()?->getRole());
+        }
+    }
+
+    public function testATransactionOfAConfirmedSeriesIsLeftAlone(): void
+    {
+        $series = new RecurringSeries($this->checking, $this->createCounterparty($this->user, 'salaire acme sas'), true, Periodicity::Monthly, 250000, 90, new \DateTimeImmutable('2026-08-28'));
+        $series->confirm('Salary', null);
+        $this->entityManager->persist($series);
         $salary = $this->add($this->checking, '2026-09-28', "Virement en votre faveur\nVIR SEPA SALAIRE\nACME SAS", 250000);
+        $salary->attachTo($series);
 
         $this->detect();
 
@@ -131,17 +152,31 @@ final class TransferDetectorTest extends KernelTestCase
 
         self::assertSame($rent, $sent->getCategory());
         self::assertFalse($sent->isInternalTransfer());
-        self::assertNull($received->getCategory());
+        // Not its other side, then: received from someone else
+        self::assertFalse($received->isInternalTransfer());
+        self::assertSame(CategoryRole::Transfers, $received->getCategory()?->getRole());
     }
 
     public function testTheCategoryOfItsSeriesOverridesTransfers(): void
     {
         $rent = $this->createCategory($this->user, 'Rent');
-        $series = new RecurringSeries($this->checking, 'web loyer', false, 'Rent', Periodicity::Monthly, -80000, 90, new \DateTimeImmutable('2026-08-01'));
+        $series = new RecurringSeries($this->checking, $this->createCounterparty($this->user, 'loyer'), false, Periodicity::Monthly, -80000, 90, new \DateTimeImmutable('2026-08-01'));
         $series->confirm('Rent', $rent);
         $this->entityManager->persist($series);
         $sent = $this->add($this->checking, '2026-09-01', "Virement émis\nWEB Loyer", -80000);
         $sent->attachTo($series);
+
+        $this->detect();
+
+        self::assertNull($sent->getCategory());
+        self::assertSame($rent, $sent->getEffectiveCategory());
+    }
+
+    public function testTheCategoryOfItsCounterpartyOverridesTransfers(): void
+    {
+        $rent = $this->createCategory($this->user, 'Rent');
+        $this->createCounterparty($this->user, 'loyer')->categorize($rent);
+        $sent = $this->add($this->checking, '2026-09-01', "Virement émis\nWEB Loyer", -80000);
 
         $this->detect();
 

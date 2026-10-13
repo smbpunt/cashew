@@ -2,6 +2,7 @@
 
 namespace App\Recurrence;
 
+use App\Counterparty\CounterpartyNormalizer;
 use App\Entity\Transaction;
 
 /**

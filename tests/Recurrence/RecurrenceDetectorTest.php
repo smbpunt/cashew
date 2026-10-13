@@ -215,7 +215,7 @@ final class RecurrenceDetectorTest extends KernelTestCase
         }
         $this->entityManager->flush();
         // As the detection suggested it before it told contracts apart
-        $whole = new RecurringSeries($this->account, 'generali iard sa generali contrat', false, 'Generali', Periodicity::Monthly, -1927, 70, new \DateTimeImmutable('2026-09-07'));
+        $whole = new RecurringSeries($this->account, $this->createCounterparty($this->user, 'generali iard sa generali contrat'), false, Periodicity::Monthly, -1927, 70, new \DateTimeImmutable('2026-09-07'));
         $this->entityManager->persist($whole);
         foreach ($this->entityManager->getRepository(Transaction::class)->findAll() as $transaction) {
             $transaction->attachTo($whole);
@@ -234,7 +234,7 @@ final class RecurrenceDetectorTest extends KernelTestCase
             $this->addGenerali($month);
         }
         $this->entityManager->flush();
-        $whole = new RecurringSeries($this->account, 'generali iard sa generali contrat', false, 'Generali', Periodicity::Monthly, -1927, 70, new \DateTimeImmutable('2026-08-07'));
+        $whole = new RecurringSeries($this->account, $this->createCounterparty($this->user, 'generali iard sa generali contrat'), false, Periodicity::Monthly, -1927, 70, new \DateTimeImmutable('2026-08-07'));
         $whole->confirm('Generali', null);
         $this->entityManager->persist($whole);
         foreach ($this->entityManager->getRepository(Transaction::class)->findAll() as $transaction) {

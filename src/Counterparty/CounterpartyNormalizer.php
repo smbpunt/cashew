@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Recurrence;
+namespace App\Counterparty;
 
 /**
  * Tells who's on the other side of a transaction, from its label, the same way from one occurrence to the next:
@@ -33,6 +33,31 @@ final class CounterpartyNormalizer
     ];
 
     /**
+     * How banks word who a transfer is to or from, on the first line of the label (Revolut) or on the one after the
+     * kind of operation (Crédit Agricole): "Virement de : X", "To X", "Paiement envoyé par X", "VIR INST de X - motive",
+     * "VIR INST WERO vers X", "Wero vers X". Wordings TransferDetector::PATTERNS tells a transfer by.
+     */
+    private const array TRANSFER_PARTIES = [
+        '/^vir inst (?:wero )?(?:de|vers) (?<party>.+)$/iu',
+        '/^wero vers (?<party>.+)$/iu',
+        '/^virement (?:international )?(?:de|à) : (?<party>.+)$/iu',
+        '/^to (?<party>.+)$/iu',
+        '/^paiement envoyé par (?<party>.+)$/iu',
+    ];
+
+    /**
+     * How Crédit Agricole words it, after "Virement en votre faveur" or "Virement émis" only: "DE X", "WEB X - motive".
+     */
+    private const array CONTINUED_TRANSFER_PARTIES = [
+        '/^(?:de|web) (?<party>.+)$/iu',
+    ];
+
+    /**
+     * Words that only say who a person is to the bank: "M.", "MME", "MONSIEUR", "M OU MME"...
+     */
+    private const array CIVILITIES = ['m', 'mme', 'mle', 'mlle', 'mr', 'monsieur', 'madame', 'mademoiselle', 'ou'];
+
+    /**
      * Under it, a token with digits is a date, a time or an amount rather than a reference.
      */
     private const int MIN_REFERENCE_LENGTH = 6;
@@ -47,8 +72,14 @@ final class CounterpartyNormalizer
         $lines = array_values(array_filter(array_map(trim(...), explode("\n", $label)), static fn (string $line): bool => '' !== $line));
 
         // A label on several lines (Crédit Agricole) may start with the kind of operation: "Prélèvement", "Virement en votre faveur"...
-        if (\count($lines) > 1 && array_all(self::tokens($lines[0]), static fn (string $token): bool => \in_array($token, self::OPERATION_WORDS, true))) {
+        $continued = \count($lines) > 1 && array_all(self::tokens($lines[0]), static fn (string $token): bool => \in_array($token, self::OPERATION_WORDS, true));
+        if ($continued) {
             array_shift($lines);
+        }
+
+        $party = self::transferParty($lines[0] ?? '', $continued);
+        if (null !== $party) {
+            return $party;
         }
 
         // Who it is comes first; then come the references: mandate, creditor, due date...
@@ -110,11 +141,30 @@ final class CounterpartyNormalizer
     }
 
     /**
-     * A name to show for the counterparty, until the user gives a better one.
+     * Who a transfer is to or from, the same whatever its motive and however the bank words their name: "VIR INST de MME
+     * NICOLAU NADEGE - cadeau" and "VIR INST vers Nadege NICOLAU" are both "nadege nicolau", their words in order.
+     *
+     * @param bool $continued whether the line follows the kind of operation
+     *
+     * @return string|null null when the line doesn't word a transfer
      */
-    public function name(string $counterparty, string $reference = ''): string
+    private static function transferParty(string $line, bool $continued): ?string
     {
-        return ucwords($counterparty).('' === $reference ? '' : ' · '.strtoupper($reference));
+        foreach ($continued ? [...self::TRANSFER_PARTIES, ...self::CONTINUED_TRANSFER_PARTIES] : self::TRANSFER_PARTIES as $pattern) {
+            if (1 !== preg_match($pattern, $line, $match)) {
+                continue;
+            }
+
+            // The motive comes after a dash: "X - billet d avion"
+            $words = array_values(array_diff(self::tokens(explode(' - ', $match['party'])[0]), self::CIVILITIES));
+            if ([] !== $words) {
+                sort($words);
+
+                return mb_substr(implode(' ', $words), 0, 255);
+            }
+        }
+
+        return null;
     }
 
     /**

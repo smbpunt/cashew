@@ -3,6 +3,7 @@
 namespace App\Recurrence;
 
 use App\Entity\BankAccount;
+use App\Entity\Counterparty;
 use App\Entity\RecurringSeries;
 use App\Entity\Transaction;
 use App\Entity\User;
@@ -33,7 +34,6 @@ final readonly class RecurrenceDetector
     public function __construct(
         private TransactionRepository $transactions,
         private RecurringSeriesRepository $series,
-        private CounterpartyNormalizer $normalizer,
         private SeriesAnalyzer $analyzer,
         private ReferenceSplitter $splitter,
         private EntityManagerInterface $entityManager,
@@ -52,7 +52,7 @@ final readonly class RecurrenceDetector
             $known[self::key($series->getAccount(), $series->getCounterparty(), $series->isIncome(), $series->getReference())] = $series;
         }
 
-        /** @var array<string, array{account: BankAccount, counterparty: string, income: bool, transactions: list<Transaction>}> $groups */
+        /** @var array<string, array{account: BankAccount, counterparty: Counterparty, income: bool, transactions: list<Transaction>}> $groups */
         $groups = [];
         /** @var array<int, \DateTimeImmutable> $lastDates by account */
         $lastDates = [];
@@ -60,8 +60,8 @@ final readonly class RecurrenceDetector
             $account = $transaction->getAccount();
             $lastDates[spl_object_id($account)] = max($lastDates[spl_object_id($account)] ?? $transaction->getDate(), $transaction->getDate());
 
-            $counterparty = $this->normalizer->normalize($transaction->getLabel());
-            if ('' === $counterparty || str_starts_with($counterparty, self::CARD_SETTLEMENT) || 0 === $transaction->getAmount()) {
+            $counterparty = $transaction->getCounterparty();
+            if (null === $counterparty || str_starts_with($counterparty->getKey(), self::CARD_SETTLEMENT) || 0 === $transaction->getAmount()) {
                 continue;
             }
 
@@ -104,7 +104,7 @@ final readonly class RecurrenceDetector
      * @param list<Transaction>              $transactions of the same account, counterparty, direction and contract, oldest first
      * @param array<string, RecurringSeries> $known
      */
-    private function detectIn(BankAccount $account, string $counterparty, bool $income, string $reference, array $transactions, array $known, \DateTimeImmutable $lastDate): void
+    private function detectIn(BankAccount $account, Counterparty $counterparty, bool $income, string $reference, array $transactions, array $known, \DateTimeImmutable $lastDate): void
     {
         $series = $known[self::key($account, $counterparty, $income, $reference)] ?? null;
         // The suggestion of the whole counterparty, removed for those of its contracts
@@ -132,7 +132,6 @@ final readonly class RecurrenceDetector
                 $account,
                 $counterparty,
                 $income,
-                $this->normalizer->name($counterparty, $reference),
                 $analysis->periodicity,
                 $analysis->typicalAmount,
                 $analysis->confidence,
@@ -219,8 +218,8 @@ final readonly class RecurrenceDetector
         return array_values(array_filter($transactions, static fn (int $i): bool => $isMember[$i], \ARRAY_FILTER_USE_KEY));
     }
 
-    private static function key(BankAccount $account, string $counterparty, bool $income, string $reference = ''): string
+    private static function key(BankAccount $account, Counterparty $counterparty, bool $income, string $reference = ''): string
     {
-        return implode("\0", [spl_object_id($account), $counterparty, (int) $income, $reference]);
+        return implode("\0", [spl_object_id($account), spl_object_id($counterparty), (int) $income, $reference]);
     }
 }

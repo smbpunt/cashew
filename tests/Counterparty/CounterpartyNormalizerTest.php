@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Tests\Recurrence;
+namespace App\Tests\Counterparty;
 
-use App\Recurrence\CounterpartyNormalizer;
+use App\Counterparty\CounterpartyNormalizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -19,7 +19,7 @@ final class CounterpartyNormalizerTest extends TestCase
         yield 'a transfer on several lines' => ["Virement en votre faveur\nVIR SEPA SALAIRE\nACME SAS\n\nFR00ZZZ000000", 'salaire acme sas'];
         yield 'a card payment and its date' => ["Paiement par carte\nCARREFOUR MARSEILLE 09/09", 'carrefour marseille'];
         yield 'a card statement line' => ['CARREFOUR MARSEILLE ', 'carrefour marseille'];
-        yield 'accents and punctuation' => ['Virement de : Hélène Dupré', 'helene dupre'];
+        yield 'accents and punctuation' => ['Virement de : Hélène Dupré', 'dupre helene'];
         yield 'a short name with a digit' => ['M6 Plus', 'm6 plus'];
         yield 'only the kind of operation' => ['Frais de livraison de carte', 'frais de livraison de carte'];
         yield 'only references' => ['12/09 0042', ''];
@@ -41,6 +41,60 @@ final class CounterpartyNormalizerTest extends TestCase
         self::assertSame($counterparty, new CounterpartyNormalizer()->normalize($label));
     }
 
+    /**
+     * @return iterable<string, array{list<string>, string}>
+     */
+    public static function transfers(): iterable
+    {
+        yield 'whatever the motive, the civility, the order of the names, the direction' => [[
+            "Virement en votre faveur\nVIR INST de MME NICOLAU NADEGE - billet d avion",
+            "Virement en votre faveur\nVIR INST de MME NICOLAU NADEGE - cadeau romain",
+            "Virement émis\nVIR INST vers Nadege NICOLAU",
+            "Virement émis\nWEB Nadege NICOLAU - MONSIEUR NICOLAU BASTIEN",
+        ], 'nadege nicolau'];
+        yield 'from a bank to the other' => [[
+            'Virement de : ANTOINE GORENE',
+            'Virement à : ANTOINE GORENE',
+            "Virement émis\nVIR INST vers GORENE Antoine",
+            "Virement en votre faveur\nVIR INST de Antoine GORENE - Virement de Antoine GORENE",
+        ], 'antoine gorene'];
+        yield 'by Wero' => [[
+            "Virement en votre faveur\nVIR INST WERO de MME MORO MARINA\n019f1dfd8e5843beaed96de7aa3adb",
+            "Virement émis\nWero vers MARINA MORO\n019f50ffa861703e95b5085593013210",
+        ], 'marina moro'];
+        yield 'on Revolut' => [[
+            'To Tristan Aviles',
+            'Paiement envoyé par MR  TRISTAN AVILES',
+            "Virement en votre faveur\nVIR INST de MR TRISTAN AVILES - VIREMENT DE MR TRISTAN AVILES\nVIREMENT DE MR TRISTAN AVILES",
+        ], 'aviles tristan'];
+        yield 'on Crédit Agricole, the old way' => [[
+            "Virement en votre faveur\nDE M.       MORO ANTHONY",
+            "Virement émis\nWEB ANTHONY MORO",
+        ], 'anthony moro'];
+    }
+
+    /**
+     * @param list<string> $labels
+     */
+    #[DataProvider('transfers')]
+    public function testTellsWhoATransferIsToOrFrom(array $labels, string $counterparty): void
+    {
+        $normalizer = new CounterpartyNormalizer();
+
+        self::assertSame(array_fill(0, \count($labels), $counterparty), array_map($normalizer->normalize(...), $labels));
+    }
+
+    public function testATransferFromACompanyIsNotOfAPerson(): void
+    {
+        $normalizer = new CounterpartyNormalizer();
+
+        // Neither "VIR SEPA", nor a label starting with "de" or "web" on its own
+        self::assertSame('salaire acme sas', $normalizer->normalize("Virement en votre faveur\nVIR SEPA SALAIRE\nACME SAS"));
+        self::assertSame('web loyer', $normalizer->normalize('WEB LOYER'));
+        self::assertSame('gaulle charles', $normalizer->normalize('DE GAULLE CHARLES'));
+        self::assertSame('webhelp', $normalizer->normalize('WEBHELP'));
+    }
+
     public function testTheReferencesOfEachOccurrenceDoNotChangeIt(): void
     {
         $normalizer = new CounterpartyNormalizer();
@@ -49,12 +103,6 @@ final class CounterpartyNormalizerTest extends TestCase
             $normalizer->normalize("Prélèvement\nFREE MOBILE\nECH/150826 ID EMETTEUR/FR12ZZZ123456 MDT/++FM2A88 REF/080042"),
             $normalizer->normalize("Prélèvement\nFREE MOBILE\nECH/150926 ID EMETTEUR/FR12ZZZ123456 MDT/++FM3A88 REF/090042"),
         );
-    }
-
-    public function testNamesTheCounterparty(): void
-    {
-        self::assertSame('Salaire Acme Sas', new CounterpartyNormalizer()->name('salaire acme sas'));
-        self::assertSame('Generali Iard Sa · AU856955', new CounterpartyNormalizer()->name('generali iard sa', 'au856955'));
     }
 
     public function testTellsTheReferencesOfTheWholeLabel(): void

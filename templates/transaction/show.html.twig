@@ -2,7 +2,6 @@
 
 {% set transaction = history.transaction %}
 {% set currency = history.currency %}
-{% set label = transaction.label|split("\n") %}
 
 {% block title %}{{ transaction.name }}{% endblock %}
 
@@ -13,16 +12,7 @@
     </a>
 
     <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="flex min-w-0 flex-col gap-1">
-            <div class="flex items-center gap-2">
-                <twig:CategoryIcon :category="transaction.effectiveCategory" class="size-5" />
-                <h1 class="text-2xl font-bold tracking-tight break-words">{{ transaction.recurring ? transaction.name : label|first }}</h1>
-            </div>
-            {# The name of its series first, over the whole label #}
-            {% for line in transaction.recurring ? label : label|slice(1) %}
-                <p class="text-sm break-words text-muted-foreground">{{ line }}</p>
-            {% endfor %}
-        </div>
+        <twig:TransactionName :transaction="transaction" key="transaction-name-{{ transaction.id }}" />
         <twig:Money :amount="transaction.amount" :currency="currency" signed class="text-2xl font-semibold tracking-tight" />
     </div>
 
@@ -38,7 +28,7 @@
                 <dd>{{ value }}</dd>
             </div>
         {% endfor %}
-        <twig:TransactionCategory :transaction="transaction" key="transaction-category-{{ transaction.id }}" />
+        <twig:TransactionCategory :transaction="transaction" ofCounterparty key="transaction-category-{{ transaction.id }}" />
         {% if transaction.recurring %}
             <twig:Badge variant="secondary" data-recurring>{{ 'dashboard.detail.series'|trans }} · {{ ('recurrence.periodicity.' ~ transaction.recurringSeries.periodicity.value)|trans }}</twig:Badge>
         {% endif %}

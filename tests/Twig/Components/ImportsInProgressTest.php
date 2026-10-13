@@ -69,7 +69,7 @@ final class ImportsInProgressTest extends WebTestCase
     public function testGoesToTheReviewOfTheRecurringTransactionsFoundByTheImportsItFollowed(): void
     {
         $history = $this->createImport($this->user, 'history.csv');
-        $this->entityManager->persist(new RecurringSeries($this->createAccount($this->user), 'free mobile', false, 'Free Mobile', Periodicity::Monthly, -1999, 90, new \DateTimeImmutable('2026-09-15')));
+        $this->entityManager->persist(new RecurringSeries($this->createAccount($this->user), $this->createCounterparty($this->user, 'free mobile'), false, Periodicity::Monthly, -1999, 90, new \DateTimeImmutable('2026-09-15')));
         $this->entityManager->flush();
 
         $component = $this->component();

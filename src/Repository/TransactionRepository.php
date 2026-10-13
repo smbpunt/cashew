@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\BankAccount;
 use App\Entity\Category;
+use App\Entity\Counterparty;
 use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
@@ -38,6 +39,25 @@ class TransactionRepository extends ServiceEntityRepository
             ->setParameter('account', $account)
             ->getQuery()
             ->getSingleColumnResult();
+    }
+
+    /**
+     * All the owner's transactions, with their counterparty and series.
+     *
+     * @return list<Transaction>
+     */
+    public function findOwned(User $owner): array
+    {
+        return $this->createQueryBuilder('t')
+            ->addSelect('k', 's')
+            ->join('t.account', 'a')
+            ->leftJoin('t.counterparty', 'k')
+            ->leftJoin('t.recurringSeries', 's')
+            ->where('a.owner = :owner')
+            ->setParameter('owner', $owner)
+            ->orderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -141,16 +161,17 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * The owner's transactions that may come back, oldest first, with their series: all but the deferred card
-     * settlements, which only add up purchases.
+     * The owner's transactions that may come back, oldest first, with their counterparty and series: all but the
+     * deferred card settlements, which only add up purchases.
      *
      * @return list<Transaction>
      */
     public function findForRecurrence(User $owner): array
     {
         return $this->ownedWithoutSettlements($owner)
-            ->addSelect('a', 's')
+            ->addSelect('a', 's', 'k')
             ->leftJoin('t.recurringSeries', 's')
+            ->leftJoin('t.counterparty', 'k')
             ->orderBy('t.date', 'ASC')
             ->addOrderBy('t.id', 'ASC')
             ->getQuery()
@@ -252,7 +273,8 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * The transactions of the categories, or of their confirmed series, within the period, most recent first.
+     * The transactions of the categories within the period, most recent first: theirs, or else that of their confirmed
+     * series, or else that of their counterparty.
      *
      * @param list<Category> $categories
      *
@@ -262,7 +284,11 @@ class TransactionRepository extends ServiceEntityRepository
     {
         return $this->withCategories($this->ownedWithoutSettlements($owner))
             ->addSelect('a')
-            ->andWhere('t.category IN (:categories) OR (t.category IS NULL AND s.status = :confirmed AND s.category IN (:categories))')
+            ->andWhere(<<<'DQL'
+                t.category IN (:categories)
+                OR (t.category IS NULL AND s.status = :confirmed AND s.category IN (:categories))
+                OR (t.category IS NULL AND (s.id IS NULL OR s.status != :confirmed OR s.category IS NULL) AND k.category IN (:categories))
+                DQL)
             ->andWhere('t.date >= :start')
             ->andWhere('t.date < :end')
             ->setParameter('categories', $categories)
@@ -294,17 +320,19 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * The owner's credits, or debits, in the currency, most recent first, deferred card settlements aside: those
-     * among which to find the other transactions of a counterparty.
+     * The credits, or debits, of the counterparty in the currency, on any of its owner's accounts, most recent first,
+     * deferred card settlements aside.
      *
      * @return list<Transaction>
      */
-    public function findOfDirection(User $owner, string $currency, bool $income): array
+    public function findOfCounterparty(Counterparty $counterparty, string $currency, bool $income): array
     {
-        return $this->withCategories($this->ownedWithoutSettlements($owner))
+        return $this->withCategories($this->ownedWithoutSettlements($counterparty->getOwner()))
             ->addSelect('a')
+            ->andWhere('t.counterparty = :counterparty')
             ->andWhere('t.currency = :currency')
             ->andWhere($income ? 't.amount > 0' : 't.amount < 0')
+            ->setParameter('counterparty', $counterparty)
             ->setParameter('currency', $currency)
             ->orderBy('t.date', 'DESC')
             ->addOrderBy('t.id', 'DESC')
@@ -313,12 +341,33 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Loads with them what tells their category: their own, or that of their series.
+     * How many of the counterparty's transactions go by its name: those that aren't recurring, in no series the user
+     * confirmed.
+     */
+    public function countNamedAfter(Counterparty $counterparty): int
+    {
+        return (int) $this->createQueryBuilder('t')
+            ->select('COUNT(t.id)')
+            ->leftJoin('t.recurringSeries', 's')
+            ->where('t.counterparty = :counterparty')
+            ->andWhere('s.id IS NULL OR s.status != :confirmed')
+            ->setParameter('counterparty', $counterparty)
+            ->setParameter('confirmed', SeriesStatus::Confirmed)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Loads with them what tells their category: their own, or else that of their series, or else that of their
+     * counterparty; and what tells their name.
      */
     private function withCategories(QueryBuilder $queryBuilder): QueryBuilder
     {
         return $queryBuilder
-            ->addSelect('c', 'cp', 's', 'sc', 'scp')
+            ->addSelect('c', 'cp', 's', 'sc', 'scp', 'k', 'kc', 'kcp')
+            ->leftJoin('t.counterparty', 'k')
+            ->leftJoin('k.category', 'kc')
+            ->leftJoin('kc.parent', 'kcp')
             ->leftJoin('t.category', 'c')
             ->leftJoin('c.parent', 'cp')
             ->leftJoin('t.recurringSeries', 's')

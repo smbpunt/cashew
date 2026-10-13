@@ -1,0 +1,37 @@
+{% set label = transaction.label|split("\n") %}
+<div {{ attributes.defaults({class: 'flex min-w-0 flex-1 flex-col gap-1'}) }} data-transaction-name>
+    {% if editing %}
+        {{ form_start(form, {attr: {
+            class: 'flex max-w-xl flex-col gap-2',
+            novalidate: 'novalidate',
+            'data-action': 'live#action:prevent',
+            'data-live-action-param': 'rename',
+        }}) }}
+            {{ form_label(form.name) }}
+            <div class="flex gap-2">
+                {{ form_widget(form.name, {attr: {autofocus: 'autofocus', placeholder: transaction.oneLineLabel}}) }}
+                <twig:Button type="submit" data-loading="addAttribute(disabled)">{{ 'transaction.rename.save'|trans }}</twig:Button>
+                <twig:Button type="button" variant="ghost" data-action="live#action" data-live-action-param="cancel">{{ 'transaction.rename.cancel'|trans }}</twig:Button>
+            </div>
+            {{ form_errors(form.name) }}
+            <p class="text-xs text-muted-foreground" data-rename-scope>
+                {{- (transaction.recurring ? 'transaction.rename.series_scope' : 'transaction.rename.counterparty_scope')|trans({count: this.count}) -}}
+            </p>
+        {{ form_end(form) }}
+    {% else %}
+        <div class="flex items-center gap-2">
+            <twig:CategoryIcon :category="transaction.effectiveCategory" class="size-5" />
+            <h1 class="text-2xl font-bold tracking-tight break-words">{{ transaction.named ? transaction.name : label|first }}</h1>
+            {% if this.nameHolder %}
+                <twig:Button variant="ghost" size="icon-sm" data-action="live#action" data-live-action-param="edit" aria-label="{{ 'transaction.rename.action'|trans }}" title="{{ 'transaction.rename.action'|trans }}" class="text-muted-foreground">
+                    <twig:ux:icon name="lucide:pencil" aria-hidden="true" />
+                </twig:Button>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# The name the user knows it by first, over the whole label; the whole label while they name it #}
+    {% for line in transaction.named or editing ? label : label|slice(1) %}
+        <p class="text-sm break-words text-muted-foreground">{{ line }}</p>
+    {% endfor %}
+</div>

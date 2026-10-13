@@ -3,6 +3,7 @@
 namespace App\Tests\Recurrence;
 
 use App\Entity\BankAccount;
+use App\Entity\Counterparty;
 use App\Entity\RecurringSeries;
 use App\Entity\User;
 use App\Enum\Bank;
@@ -102,8 +103,9 @@ final class SeriesScheduleTest extends TestCase
 
     private function series(Periodicity $periodicity, string $lastSeenOn): RecurringSeries
     {
-        $account = new BankAccount(new User(), Bank::CreditAgricole, '123', 'Compte de Dépôt', 'EUR');
+        $owner = new User();
+        $account = new BankAccount($owner, Bank::CreditAgricole, '123', 'Compte de Dépôt', 'EUR');
 
-        return new RecurringSeries($account, 'netflix', false, 'Netflix', $periodicity, -1349, 90, new \DateTimeImmutable($lastSeenOn));
+        return new RecurringSeries($account, new Counterparty($owner, 'netflix'), false, $periodicity, -1349, 90, new \DateTimeImmutable($lastSeenOn));
     }
 }

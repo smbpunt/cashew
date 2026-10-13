@@ -38,7 +38,7 @@ class RecurringSeriesRepository extends ServiceEntityRepository
             ->andWhere('s.status = :suggested')
             ->setParameter('suggested', SeriesStatus::Suggested)
             ->orderBy('s.confidence', 'DESC')
-            ->addOrderBy('s.name', 'ASC')
+            ->addOrderBy('sortName', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -57,7 +57,7 @@ class RecurringSeriesRepository extends ServiceEntityRepository
             ->andWhere('s.status = :confirmed')
             ->andWhere('s.income = false')
             ->setParameter('confirmed', SeriesStatus::Confirmed)
-            ->orderBy('s.name', 'ASC')
+            ->orderBy('sortName', 'ASC')
             ->addOrderBy('s.id', 'ASC')
             ->getQuery()
             ->getResult();
@@ -73,11 +73,15 @@ class RecurringSeriesRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * With their account and counterparty, and what to sort them by name with: their own, or that of their counterparty.
+     */
     private function owned(User $owner): QueryBuilder
     {
         return $this->createQueryBuilder('s')
-            ->addSelect('a')
+            ->addSelect('a', 'k', 'COALESCE(s.name, k.name, k.key) AS HIDDEN sortName')
             ->join('s.account', 'a')
+            ->join('s.counterparty', 'k')
             ->where('a.owner = :owner')
             ->setParameter('owner', $owner);
     }

@@ -3,6 +3,7 @@
 namespace App\Tests\MessageHandler;
 
 use App\Entity\BankAccount;
+use App\Entity\Counterparty;
 use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
@@ -70,7 +71,8 @@ final class ImportStatementHandlerTest extends KernelTestCase
         $import = $this->uploadAndImport('credit_agricole_recurring.csv');
 
         self::assertSame(26, $import->getImportedCount());
-        $series = $this->entityManager->getRepository(RecurringSeries::class)->findBy([], ['name' => 'ASC']);
+        $series = $this->entityManager->getRepository(RecurringSeries::class)->findAll();
+        usort($series, static fn (RecurringSeries $a, RecurringSeries $b): int => $a->getName() <=> $b->getName());
         self::assertSame(
             [['Echeance Pret', -85000, 4], ['Edf Clients Particuliers', -8500, 4], ['Free Mobile', -1999, 5], ['Salaire Acme Sas', 250000, 4]],
             array_map(fn (RecurringSeries $series): array => [
@@ -81,6 +83,11 @@ final class ImportStatementHandlerTest extends KernelTestCase
         );
         // Not the shopping
         self::assertSame(9, $this->entityManager->getRepository(Transaction::class)->count(['recurringSeries' => null]));
+
+        // One counterparty for all the transactions of each, those of no series too
+        $carrefour = $this->entityManager->getRepository(Counterparty::class)->findOneBy(['owner' => $this->user, 'key' => 'carrefour marseille']);
+        self::assertNotNull($carrefour);
+        self::assertSame(9, $this->entityManager->getRepository(Transaction::class)->count(['counterparty' => $carrefour]));
     }
 
     public function testLeavesTheMonthInProgressForLater(): void
@@ -172,8 +179,10 @@ final class ImportStatementHandlerTest extends KernelTestCase
             self::assertSame(TransactionKind::InternalTransfer, $side?->getKind(), $label);
             self::assertSame('Transfers', $side->getCategory()?->getName());
         }
-        // Received from someone else
-        self::assertNull($transactions->findOneBy(['label' => 'Virement de : JANE DOE'])?->getCategory());
+        // Received from someone else: earned all the same
+        $received = $transactions->findOneBy(['label' => 'Virement de : JANE DOE']);
+        self::assertSame(TransactionKind::Regular, $received?->getKind());
+        self::assertSame('Transfers', $received->getCategory()?->getName());
     }
 
     public function testTheSameFileCanOnlyBeUploadedAgainAfterItsImportFailed(): void

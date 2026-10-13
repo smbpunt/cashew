@@ -162,6 +162,6 @@ final class SeriesAnalyzerTest extends TestCase
     {
         $account = new BankAccount(new User(), Bank::CreditAgricole, '123', 'Compte', 'EUR');
 
-        return new Transaction($account, null, new \DateTimeImmutable($date), 'FREE MOBILE', $amount, 'EUR', TransactionKind::Regular, null, $date.$amount);
+        return new Transaction($account, null, new \DateTimeImmutable($date), 'FREE MOBILE', null, $amount, 'EUR', TransactionKind::Regular, null, $date.$amount);
     }
 }

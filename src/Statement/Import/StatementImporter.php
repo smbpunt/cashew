@@ -2,6 +2,7 @@
 
 namespace App\Statement\Import;
 
+use App\Counterparty\CounterpartyResolver;
 use App\Entity\BankAccount;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
@@ -24,13 +25,14 @@ final readonly class StatementImporter
         private CutoffPolicy $cutoff,
         private TransactionFingerprinter $fingerprinter,
         private AccountResolver $accounts,
+        private CounterpartyResolver $counterparties,
         private TransactionRepository $transactions,
         private EntityManagerInterface $entityManager,
     ) {
     }
 
     /**
-     * Persists the new transactions and accounts, without flushing them.
+     * Persists the new transactions, accounts and counterparties, without flushing them.
      *
      * @throws UnreadableStatementException
      */
@@ -78,6 +80,7 @@ final readonly class StatementImporter
                 $import,
                 $parsed->date,
                 $parsed->label,
+                $this->counterparties->resolve($import->getOwner(), $parsed->label),
                 $parsed->amount,
                 $parsed->currency,
                 $parsed->kind,

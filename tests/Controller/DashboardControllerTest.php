@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
+use Symfony\Component\DomCrawler\Crawler;
 
 final class DashboardControllerTest extends WebTestCase
 {
@@ -160,13 +161,14 @@ final class DashboardControllerTest extends WebTestCase
 
         $transactions = $this->entityManager->getRepository(Transaction::class);
         $free = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"]) ?? throw new \LogicException('No FREE MOBILE.');
-        $series = new RecurringSeries($free->getAccount(), 'free mobile', false, 'free mobile', Periodicity::Monthly, -1999, 90, $free->getDate());
+        $series = new RecurringSeries($free->getAccount(), $this->createCounterparty($this->user, 'free mobile'), false, Periodicity::Monthly, -1999, 90, $free->getDate());
         $series->confirm('Phone plan', null);
         $this->entityManager->persist($series);
         $free->attachTo($series);
         // Only suggested: not named after it yet
         $cinema = $transactions->findOneBy(['label' => 'Cinéma']) ?? throw new \LogicException('No Cinéma.');
-        $suggested = new RecurringSeries($cinema->getAccount(), 'cinema', false, 'Movies', Periodicity::Monthly, -1500, 60, $cinema->getDate());
+        $suggested = new RecurringSeries($cinema->getAccount(), $this->createCounterparty($this->user, 'cinema'), false, Periodicity::Monthly, -1500, 60, $cinema->getDate());
+        $suggested->rename('Movies');
         $this->entityManager->persist($suggested);
         $cinema->attachTo($suggested);
         $this->entityManager->flush();
@@ -197,7 +199,7 @@ final class DashboardControllerTest extends WebTestCase
         $transactions = $this->entityManager->getRepository(Transaction::class);
         $free = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"]) ?? throw new \LogicException('No FREE MOBILE.');
         // The series' category, for its transactions
-        $series = new RecurringSeries($free->getAccount(), 'free mobile', false, 'Free', Periodicity::Monthly, -1999, 90, $free->getDate());
+        $series = new RecurringSeries($free->getAccount(), $this->createCounterparty($this->user, 'free mobile'), false, Periodicity::Monthly, -1999, 90, $free->getDate());
         $series->confirm('Free', $internet);
         $this->entityManager->persist($series);
         $free->attachTo($series);
@@ -252,7 +254,7 @@ final class DashboardControllerTest extends WebTestCase
 
         $transactions = $this->entityManager->getRepository(Transaction::class);
         $free = $transactions->findOneBy(['label' => "Prélèvement\nFREE MOBILE"]) ?? throw new \LogicException('No FREE MOBILE.');
-        $series = new RecurringSeries($free->getAccount(), 'free mobile', false, 'Free', Periodicity::Monthly, -1999, 90, $free->getDate());
+        $series = new RecurringSeries($free->getAccount(), $this->createCounterparty($this->user, 'free mobile'), false, Periodicity::Monthly, -1999, 90, $free->getDate());
         $series->confirm('Free', $internet);
         $this->entityManager->persist($series);
         $free->attachTo($series);
@@ -280,6 +282,90 @@ final class DashboardControllerTest extends WebTestCase
         // Uncategorized spending only
         self::assertSelectorCount(1, '[data-categories] > ul > li');
         self::assertSelectorNotExists('[data-fixed-charges]');
+    }
+
+    public function testSortsTheTransactionsAndRemembersIt(): void
+    {
+        $this->createKnownAndUnknownTransactions();
+
+        $this->client->request('GET', '/dashboard?month=2026-09');
+        self::assertSelectorExists('[data-sort="date"][aria-current="true"]');
+        self::assertSame(['Rent', 'Cinéma', 'Groceries', 'Groceries', 'Virement émis · VIR INST vers Revolut', 'BOULANGERIE DU PORT'], $this->names());
+
+        $this->client->clickLink('Amount');
+        self::assertSelectorExists('[data-sort="amount"][aria-current="true"]');
+        // The largest first, those that tie the most recent first
+        self::assertSame(['Rent', 'Virement émis · VIR INST vers Revolut', 'Groceries', 'Cinéma', 'Groceries', 'BOULANGERIE DU PORT'], $this->names());
+
+        $this->client->clickLink('Name');
+        self::assertSame(['BOULANGERIE DU PORT', 'Cinéma', 'Groceries', 'Groceries', 'Rent', 'Virement émis · VIR INST vers Revolut'], $this->names());
+
+        // In detail too, and from a month to the other
+        $this->client->request('GET', '/dashboard?month=2026-09&mode=detailed');
+        self::assertSelectorExists('[data-sort="name"][aria-current="true"]');
+        self::assertSelectorTextContains('[data-transaction]:first-child', 'BOULANGERIE DU PORT');
+    }
+
+    public function testListsOnlyTheTransactionsTheUserDidNotIdentifyYet(): void
+    {
+        $this->createKnownAndUnknownTransactions();
+        // Sent to someone else, filed among the transfers, within them or not
+        $transfers = $this->createCategory($this->user, 'Transfers')->setRole(CategoryRole::Transfers);
+        $family = $this->createCategory($this->user, 'Family', $transfers);
+        $account = $this->createAccount($this->user, Bank::Revolut, 'Joint (EUR)', 'Joint');
+        $this->createTransaction($account, '2026-09-21', 'To BAPTISTE C', -3500)->categorize($transfers);
+        $this->createTransaction($account, '2026-09-22', 'To MAMAN', -5000)->categorize($family);
+        // Filed in a category, it or its counterparty: unnamed, but known
+        $leisure = $this->createCategory($this->user, 'Leisure');
+        $this->createTransaction($account, '2026-09-23', 'FNAC', -2999)->categorize($leisure);
+        $this->createCounterparty($this->user, 'decathlon')->categorize($leisure);
+        $this->createTransaction($account, '2026-09-24', 'DECATHLON', -4999);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/dashboard?month=2026-09&sort=amount');
+        // Neither the series, nor the counterparty named, nor those filed in a category, nor the transfers
+        self::assertSelectorTextSame('[data-show="unidentified"][aria-current="false"]', 'To identify (2)');
+
+        $this->client->click($crawler->filter('[data-show="unidentified"]')->link());
+        self::assertSame(['Cinéma', 'BOULANGERIE DU PORT'], $this->names());
+        self::assertSelectorExists('[data-show="unidentified"][aria-current="true"]');
+        // Another order, another mode: still those
+        $this->client->clickLink('Name');
+        self::assertSame(['BOULANGERIE DU PORT', 'Cinéma'], $this->names());
+        $this->client->clickLink('Detailed');
+        self::assertSelectorCount(2, '[data-transaction]');
+
+        // Not remembered: it's an errand
+        $this->client->request('GET', '/dashboard?month=2026-09');
+        self::assertSelectorCount(10, '[data-transaction]');
+        self::assertSelectorExists('[data-show="unidentified"][aria-current="false"]');
+    }
+
+    public function testTellsWhenEveryTransactionOfTheMonthIsIdentified(): void
+    {
+        $account = $this->createAccount($this->user);
+        $this->createCounterparty($this->user, 'carrefour')->rename('Groceries');
+        $this->createTransaction($account, '2026-09-04', 'CARREFOUR', -4500);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', '/dashboard?month=2026-09&show=unidentified');
+
+        self::assertSelectorTextSame('[data-empty]', 'Every transaction of September 2026 is identified.');
+        self::assertSelectorTextSame('[data-show="unidentified"][aria-current="true"]', 'To identify');
+        // Nothing left: no errand to offer
+        $this->client->request('GET', '/dashboard?month=2026-09');
+        self::assertSelectorNotExists('[data-show]');
+    }
+
+    #[TestWith(['sort=fancy'])]
+    #[TestWith(['show=fancy'])]
+    public function testAnUnknownSortOrFilterIsNotFound(string $query): void
+    {
+        $this->createTransactions();
+
+        $this->client->request('GET', '/dashboard?'.$query);
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testAnUnknownModeIsNotFound(): void
@@ -327,6 +413,32 @@ final class DashboardControllerTest extends WebTestCase
         self::assertSelectorTextContains('dl', 'Entrées');
     }
 
+    /**
+     * A month of transactions, some the user told what they are and some not.
+     */
+    private function createKnownAndUnknownTransactions(): void
+    {
+        $bank = $this->createAccount($this->user);
+        $revolut = $this->createAccount($this->user, Bank::Revolut, 'Personal (EUR)', 'Personal');
+        $rent = $this->createSeries($bank, 'Rent', -80000, '2026-09-30');
+        $this->createTransaction($bank, '2026-09-30', 'LOYER SEPTEMBRE', -80000)->attachTo($rent);
+        $this->createTransaction($revolut, '2026-09-25', 'Cinéma', -1500);
+        $this->createCounterparty($this->user, 'carrefour')->rename('Groceries');
+        $this->createTransaction($bank, '2026-09-20', 'CARREFOUR', -4500);
+        $this->createTransaction($revolut, '2026-09-12', 'Carrefour', -1500);
+        $this->createTransaction($bank, '2026-09-10', "Virement émis\nVIR INST vers Revolut", -20000)->markAsInternalTransfer();
+        $this->createTransaction($bank, '2026-09-02', 'BOULANGERIE DU PORT', -450);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @return list<string> those of the transactions listed simply, in their order
+     */
+    private function names(): array
+    {
+        return $this->client->getCrawler()->filter('[data-transaction] a')->each(static fn (Crawler $link): string => $link->text());
+    }
+
     private function createTransactions(): void
     {
         $bank = $this->createAccount($this->user, Bank::CreditAgricole, '12345678901');
@@ -343,7 +455,7 @@ final class DashboardControllerTest extends WebTestCase
             [$bank, '2026-09-30', "Prélèvement carte\nDEBIT MENSUEL CARTE 497010XXXXXX1234", -6240, TransactionKind::DeferredCardSettlement, null],
             [$someoneElses, '2026-09-12', 'Not mine', -99900, TransactionKind::Regular, null],
         ] as $i => [$account, $date, $label, $amount, $kind, $category]) {
-            $this->entityManager->persist(new Transaction($account, null, new \DateTimeImmutable($date), $label, $amount, 'EUR', $kind, $category, 'fingerprint-'.$i));
+            $this->entityManager->persist(new Transaction($account, null, new \DateTimeImmutable($date), $label, null, $amount, 'EUR', $kind, $category, 'fingerprint-'.$i));
         }
         $this->entityManager->flush();
     }

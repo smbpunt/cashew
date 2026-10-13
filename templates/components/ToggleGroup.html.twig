@@ -1,0 +1,21 @@
+{%- props
+    ## What the options choose: each link has it as a data attribute, data-{name}="{value}".
+    name,
+    ## What the group is about, for a screen reader.
+    label,
+    ## {value, label, href, current} each, current for the one chosen.
+    options = []
+-%}
+<div role="group" aria-label="{{ label }}" {{ attributes.defaults({class: 'flex items-center gap-0.5 rounded-lg bg-muted p-0.5'}) }}>
+    {%- for option in options %}
+        <twig:Button
+            as="a"
+            variant="ghost"
+            size="xs"
+            href="{{ option.href }}"
+            aria-current="{{ option.current ? 'true' : 'false' }}"
+            class="text-muted-foreground hover:bg-background/60 aria-[current=true]:bg-background aria-[current=true]:text-foreground aria-[current=true]:shadow-sm"
+            {{ ...{('data-' ~ name): option.value} }}
+        >{{ option.label }}</twig:Button>
+    {%- endfor %}
+</div>

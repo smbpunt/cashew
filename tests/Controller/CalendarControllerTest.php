@@ -190,7 +190,7 @@ final class CalendarControllerTest extends WebTestCase
     public function testAnInvalidTokenEndsNothing(): void
     {
         $this->createTransactions();
-        $netflix = $this->entityManager->getRepository(RecurringSeries::class)->findOneBy(['name' => 'Netflix']);
+        $netflix = $this->entityManager->getRepository(RecurringSeries::class)->findOneBy(['counterparty' => $this->createCounterparty($this->user, 'netflix')]);
         self::assertNotNull($netflix);
 
         $this->client->request('POST', \sprintf('/calendar/series/%d/end', $netflix->getId()), ['_token' => 'whatever']);

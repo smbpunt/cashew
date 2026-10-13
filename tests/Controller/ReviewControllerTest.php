@@ -256,8 +256,9 @@ final class ReviewControllerTest extends WebTestCase
 
     public function testCannotReviewTheSeriesOfSomeoneElse(): void
     {
-        $theirAccount = $this->createAccount($this->createUser('bob'), Bank::Revolut, 'Personal', 'Personal');
-        $series = new RecurringSeries($theirAccount, 'netflix', false, 'Netflix', Periodicity::Monthly, -1349, 90, new \DateTimeImmutable('2026-09-20'));
+        $bob = $this->createUser('bob');
+        $theirAccount = $this->createAccount($bob, Bank::Revolut, 'Personal', 'Personal');
+        $series = new RecurringSeries($theirAccount, $this->createCounterparty($bob, 'netflix'), false, Periodicity::Monthly, -1349, 90, new \DateTimeImmutable('2026-09-20'));
         $this->entityManager->persist($series);
         $this->entityManager->flush();
 
@@ -307,7 +308,8 @@ final class ReviewControllerTest extends WebTestCase
      */
     private function createSeries(string $name, int $confidence, array $amounts): RecurringSeries
     {
-        $series = new RecurringSeries($this->account, strtolower($name), array_sum($amounts) > 0, $name, Periodicity::Monthly, (int) (array_first($amounts) ?? -1000), $confidence, new \DateTimeImmutable((string) (array_key_last($amounts) ?? '2026-09-01')));
+        $series = new RecurringSeries($this->account, $this->createCounterparty($this->user, strtolower($name)), array_sum($amounts) > 0, Periodicity::Monthly, (int) (array_first($amounts) ?? -1000), $confidence, new \DateTimeImmutable((string) (array_key_last($amounts) ?? '2026-09-01')));
+        $series->rename($name);
         $this->entityManager->persist($series);
         foreach ($amounts as $date => $amount) {
             $this->addTransaction($series, $date, $amount);

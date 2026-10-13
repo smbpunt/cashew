@@ -26,7 +26,7 @@ class Transaction
     private ?RecurringSeries $recurringSeries = null;
 
     /**
-     * The category the user gave it, over that of its series.
+     * The category the user gave it, over that of its series or its counterparty.
      */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
@@ -46,6 +46,12 @@ class Transaction
          */
         #[ORM\Column(type: Types::TEXT)]
         private string $label,
+        /**
+         * Who's on the other side, as its label tells it; null when it only holds references.
+         */
+        #[ORM\ManyToOne]
+        #[ORM\JoinColumn(onDelete: 'SET NULL')]
+        private ?Counterparty $counterparty,
         /**
          * In minor units (cents), negative for a debit.
          */
@@ -104,12 +110,46 @@ class Transaction
         return implode(' · ', explode("\n", $this->label));
     }
 
+    public function getCounterparty(): ?Counterparty
+    {
+        return $this->counterparty;
+    }
+
     /**
-     * What the user knows it as: the name they gave its series, or else its label on one line.
+     * Its label tells another counterparty, now that they're told apart otherwise.
+     */
+    public function assignTo(?Counterparty $counterparty): void
+    {
+        $this->counterparty = $counterparty;
+    }
+
+    /**
+     * What the user knows it as: the name of its series, or else the name they gave its counterparty, or else its
+     * label on one line.
      */
     public function getName(): string
     {
-        return $this->isRecurring() ? $this->recurringSeries->getName() : $this->getOneLineLabel();
+        if ($this->isRecurring()) {
+            return $this->recurringSeries->getName();
+        }
+
+        return true === $this->counterparty?->isNamed() ? $this->counterparty->getName() : $this->getOneLineLabel();
+    }
+
+    /**
+     * Whether it goes by a name the user gave: one of a series they confirmed, or from a counterparty they named.
+     */
+    public function isNamed(): bool
+    {
+        return $this->isRecurring() || true === $this->counterparty?->isNamed();
+    }
+
+    /**
+     * Whether the user told what it is: they named it, or filed it, its series or its counterparty in a category.
+     */
+    public function isIdentified(): bool
+    {
+        return $this->isNamed() || null !== $this->getEffectiveCategory();
     }
 
     public function getAmount(): int
@@ -188,11 +228,11 @@ class Transaction
     }
 
     /**
-     * The category it counts in: its own, or else that of its series.
+     * The category it counts in: its own, or else that of its series, or else that of its counterparty.
      */
     public function getEffectiveCategory(): ?Category
     {
-        return $this->category ?? $this->getSeriesCategory();
+        return $this->category ?? $this->getSeriesCategory() ?? $this->counterparty?->getCategory();
     }
 
     /**

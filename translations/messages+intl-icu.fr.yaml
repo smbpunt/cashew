@@ -39,6 +39,13 @@ dashboard:
     balance: Solde
     transactions: Transactions
     no_transactions: Aucune transaction en {month}.
+    unidentified: '{count, plural, =0 {À identifier} other {À identifier (#)}}'
+    all_identified: Toutes les transactions de {month} sont identifiées.
+    sort:
+        label: Trier par
+        date: Date
+        amount: Montant
+        name: Nom
     mode:
         label: Affichage
         simple: Simple
@@ -51,6 +58,8 @@ dashboard:
         series: Récurrent
         no_category: Aucune
         from_series: '{category} (récurrent)'
+        from_counterparty: '{category} (interlocuteur)'
+        for_counterparty: pour toutes les opérations de l’interlocuteur
         deferred_card_purchase: Carte à débit différé
         internal_transfer: Virement interne
     categories:
@@ -114,6 +123,13 @@ transaction:
         by_month_average: '{amount} par mois en moyenne sur la période'
         history: Historique
         only_once: Seule opération avec cet interlocuteur pour l’instant.
+    rename:
+        action: Renommer
+        name: Nom
+        save: Enregistrer
+        cancel: Annuler
+        counterparty_scope: '{count, plural, one {Pour cette opération de l’interlocuteur, et celles à venir. Vide, elle reprend son libellé.} other {Pour les # opérations non récurrentes de l’interlocuteur, et celles à venir. Vide, elles reprennent leur libellé.}}'
+        series_scope: '{count, plural, one {Pour cette opération de la série, et celles à venir. Vide, la série reprend le nom de l’interlocuteur.} other {Pour les # opérations de la série, et celles à venir. Vide, la série reprend le nom de l’interlocuteur.}}'
 
 locale:
     switcher: Langue

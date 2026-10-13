@@ -2,8 +2,10 @@
 
 namespace App\Tests;
 
+use App\Counterparty\CounterpartyNormalizer;
 use App\Entity\BankAccount;
 use App\Entity\Category;
+use App\Entity\Counterparty;
 use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
@@ -21,6 +23,11 @@ use Doctrine\ORM\EntityManagerInterface;
 trait EntityFactoryTrait
 {
     private EntityManagerInterface $entityManager;
+
+    /**
+     * @var array<string, Counterparty>
+     */
+    private array $counterparties = [];
 
     private function createUser(string $login): User
     {
@@ -55,14 +62,32 @@ trait EntityFactoryTrait
         TransactionKind $kind = TransactionKind::Regular,
         ?StatementImport $import = null,
     ): Transaction {
-        $transaction = new Transaction($account, $import, new \DateTimeImmutable($date), $label, $amount, $account->getCurrency(), $kind, null, bin2hex(random_bytes(32)));
+        $key = new CounterpartyNormalizer()->normalize($label);
+        $counterparty = '' === $key ? null : $this->createCounterparty($account->getOwner(), $key);
+        $transaction = new Transaction($account, $import, new \DateTimeImmutable($date), $label, $counterparty, $amount, $account->getCurrency(), $kind, null, bin2hex(random_bytes(32)));
         $this->entityManager->persist($transaction);
 
         return $transaction;
     }
 
     /**
-     * A series named as the user confirmed it by default, of credits for a positive amount.
+     * The owner's counterparty of the key, created the first time: the one the transactions of its labels have.
+     */
+    private function createCounterparty(User $owner, string $key): Counterparty
+    {
+        $cacheKey = spl_object_id($owner)."\0".$key;
+        if (!isset($this->counterparties[$cacheKey]) || !$this->entityManager->contains($this->counterparties[$cacheKey])) {
+            $this->counterparties[$cacheKey] = $this->entityManager->getRepository(Counterparty::class)->findOneBy(['owner' => $owner, 'key' => $key])
+                ?? new Counterparty($owner, $key);
+            $this->entityManager->persist($this->counterparties[$cacheKey]);
+        }
+
+        return $this->counterparties[$cacheKey];
+    }
+
+    /**
+     * A series named as the user confirmed it by default, of credits for a positive amount, of the counterparty of
+     * its name in lowercase.
      */
     private function createSeries(
         BankAccount $account,
@@ -73,7 +98,7 @@ trait EntityFactoryTrait
         SeriesStatus $status = SeriesStatus::Confirmed,
         ?Category $category = null,
     ): RecurringSeries {
-        $series = new RecurringSeries($account, mb_strtolower($name), $amount > 0, $name, $periodicity, $amount, 90, new \DateTimeImmutable($lastSeenOn));
+        $series = new RecurringSeries($account, $this->createCounterparty($account->getOwner(), mb_strtolower($name)), $amount > 0, $periodicity, $amount, 90, new \DateTimeImmutable($lastSeenOn));
         match ($status) {
             SeriesStatus::Confirmed => $series->confirm($name, $category),
             SeriesStatus::Rejected => $series->reject(),

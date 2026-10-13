@@ -62,7 +62,7 @@ final class AmountChangeFinderTest extends KernelTestCase
      */
     private function createSeries(string $counterparty, array $known, array $imported): void
     {
-        $series = new RecurringSeries($this->account, $counterparty, array_sum($known) > 0, ucwords($counterparty), Periodicity::Monthly, (int) array_last($known), 90, new \DateTimeImmutable((string) array_key_last($imported)));
+        $series = new RecurringSeries($this->account, $this->createCounterparty($this->user, $counterparty), array_sum($known) > 0, Periodicity::Monthly, (int) array_last($known), 90, new \DateTimeImmutable((string) array_key_last($imported)));
         $series->confirm(ucwords($counterparty), null);
         $this->entityManager->persist($series);
 

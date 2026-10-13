@@ -2,12 +2,12 @@
 
 namespace App\Tests\Recurrence;
 
+use App\Counterparty\CounterpartyNormalizer;
 use App\Entity\BankAccount;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Enum\Bank;
 use App\Enum\TransactionKind;
-use App\Recurrence\CounterpartyNormalizer;
 use App\Recurrence\ReferenceSplitter;
 use PHPUnit\Framework\TestCase;
 
@@ -89,6 +89,6 @@ final class ReferenceSplitterTest extends TestCase
 
     private function transaction(string $date, string $label, int $amount): Transaction
     {
-        return new Transaction($this->account, null, new \DateTimeImmutable($date), $label, $amount, 'EUR', TransactionKind::Regular, null, bin2hex(random_bytes(32)));
+        return new Transaction($this->account, null, new \DateTimeImmutable($date), $label, null, $amount, 'EUR', TransactionKind::Regular, null, bin2hex(random_bytes(32)));
     }
 }

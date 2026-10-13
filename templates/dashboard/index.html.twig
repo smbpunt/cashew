@@ -89,32 +89,54 @@
             </twig:Card>
         {% endfor %}
 
-        {# The mode switches within the frame: only the list reloads, and the page keeps its scroll #}
+        {# The list changes within the frame: only it reloads, and the page keeps its scroll #}
         <turbo-frame id="transactions">
+            {# The mode and the sort are remembered: what's shown isn't, and goes along #}
+            {% set query = {month: report.month|date('Y-m'), show: list.show.value == 'all' ? null : list.show.value} %}
+            {% set unidentified_only = list.show.value == 'unidentified' %}
             <twig:Card class="gap-0 py-0">
-                <div class="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
-                    <h2 class="font-semibold">{{ 'dashboard.transactions'|trans }}</h2>
-
-                    <div role="group" aria-label="{{ 'dashboard.mode.label'|trans }}" class="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
-                        {% for option in enum('App\\Enum\\TransactionListMode').cases() %}
+                <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3 sm:px-6">
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-semibold">{{ 'dashboard.transactions'|trans }}</h2>
+                        {% if unidentified > 0 or unidentified_only %}
                             <twig:Button
                                 as="a"
-                                variant="ghost"
+                                variant="outline"
                                 size="xs"
-                                href="{{ path('app_dashboard', {month: report.month|date('Y-m'), mode: option.value}) }}"
-                                aria-current="{{ option == mode ? 'true' : 'false' }}"
-                                class="text-muted-foreground hover:bg-background/60 aria-[current=true]:bg-background aria-[current=true]:text-foreground aria-[current=true]:shadow-sm"
-                                data-mode="{{ option.value }}"
-                            >{{ ('dashboard.mode.' ~ option.value)|trans }}</twig:Button>
-                        {% endfor %}
+                                href="{{ path('app_dashboard', query|merge({show: unidentified_only ? null : 'unidentified'})) }}"
+                                aria-current="{{ unidentified_only ? 'true' : 'false' }}"
+                                class="aria-[current=true]:border-primary aria-[current=true]:bg-primary aria-[current=true]:text-primary-foreground"
+                                data-show="unidentified"
+                            >{{ 'dashboard.unidentified'|trans({count: unidentified}) }}</twig:Button>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        {% set sort_options = enum('App\\Enum\\TransactionSort').cases()|map(option => {
+                            value: option.value,
+                            label: ('dashboard.sort.' ~ option.value)|trans,
+                            href: path('app_dashboard', query|merge({sort: option.value})),
+                            current: option == list.sort,
+                        }) %}
+                        <twig:ToggleGroup name="sort" label="{{ 'dashboard.sort.label'|trans }}" :options="sort_options" />
+
+                        {% set mode_options = enum('App\\Enum\\TransactionListMode').cases()|map(option => {
+                            value: option.value,
+                            label: ('dashboard.mode.' ~ option.value)|trans,
+                            href: path('app_dashboard', query|merge({mode: option.value})),
+                            current: option == list.mode,
+                        }) %}
+                        <twig:ToggleGroup name="mode" label="{{ 'dashboard.mode.label'|trans }}" :options="mode_options" />
                     </div>
                 </div>
 
-                {% if report.transactions is empty %}
-                    <p class="px-6 py-10 text-center text-sm text-muted-foreground">{{ 'dashboard.no_transactions'|trans({month: month_name}) }}</p>
-                {% elseif mode.value == 'detailed' %}
+                {% if transactions is empty %}
+                    <p class="px-6 py-10 text-center text-sm text-muted-foreground" data-empty>
+                        {{- (unidentified_only ? 'dashboard.all_identified' : 'dashboard.no_transactions')|trans({month: month_name}) -}}
+                    </p>
+                {% elseif list.mode.value == 'detailed' %}
                     <ul class="divide-y">
-                        {% for transaction in report.transactions %}
+                        {% for transaction in transactions %}
                             {% set label = transaction.label|split("\n") %}
                             <li class="flex items-start gap-4 px-4 py-3 sm:px-6" data-transaction>
                                 <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">
@@ -123,11 +145,11 @@
                                 <twig:CategoryIcon :category="transaction.effectiveCategory" class="mt-0.5" />
                                 <div class="flex min-w-0 flex-1 flex-col gap-1">
                                     <div>
-                                        {# The name of its series first, over the whole label #}
+                                        {# The name the user knows it by first, over the whole label #}
                                         <p class="text-sm font-medium break-words">
-                                            <a href="{{ path('app_transaction_show', {id: transaction.id}) }}" data-turbo-frame="_top" class="hover:underline">{{ transaction.recurring ? transaction.name : label|first }}</a>
+                                            <a href="{{ path('app_transaction_show', {id: transaction.id}) }}" data-turbo-frame="_top" class="hover:underline">{{ transaction.named ? transaction.name : label|first }}</a>
                                         </p>
-                                        {% for line in transaction.recurring ? label : label|slice(1) %}
+                                        {% for line in transaction.named ? label : label|slice(1) %}
                                             <p class="text-xs break-words text-muted-foreground">{{ line }}</p>
                                         {% endfor %}
                                     </div>
@@ -160,7 +182,7 @@
                     </ul>
                 {% else %}
                     <ul class="divide-y">
-                        {% for transaction in report.transactions %}
+                        {% for transaction in transactions %}
                             {# The whole row leads to the transaction, its name the link #}
                             <li class="relative flex items-center gap-4 px-4 py-2.5 hover:bg-muted/50 sm:px-6" data-transaction>
                                 <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">

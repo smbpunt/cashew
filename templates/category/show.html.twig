@@ -65,7 +65,7 @@
         {% else %}
             <ul class="divide-y">
                 {% for transaction in history.transactions %}
-                    {% set label = transaction.recurring ? transaction.recurringSeries.name : transaction.oneLineLabel %}
+                    {% set label = transaction.name %}
                     <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
                         <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">{{ transaction.date|format_date(pattern: 'd MMM') }}</time>
                         <div class="flex min-w-0 flex-1 flex-col">

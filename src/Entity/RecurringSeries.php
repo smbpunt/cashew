@@ -9,12 +9,12 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Transactions of an account that come back with the same counterparty, and contract if it has several, on a regular basis: a subscription, a
- * salary, a loan... Detected on each import, then reviewed by the user.
+ * Transactions of an account that come back with the same counterparty, and contract if it has several, on a regular
+ * basis: a subscription, a salary, a loan... Detected on each import, then reviewed by the user.
  */
 #[ORM\Entity(repositoryClass: RecurringSeriesRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_RECURRING_SERIES_COUNTERPARTY', fields: ['account', 'counterparty', 'reference', 'income'])]
-class RecurringSeries
+class RecurringSeries implements Nameable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -23,6 +23,12 @@ class RecurringSeries
 
     #[ORM\Column(enumType: SeriesStatus::class)]
     private SeriesStatus $status = SeriesStatus::Suggested;
+
+    /**
+     * The name the user gave it, over that of its counterparty: "Prime", from "Amazon".
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $name = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
@@ -44,18 +50,14 @@ class RecurringSeries
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
         private BankAccount $account,
-        /**
-         * Who's on the other side, as CounterpartyNormalizer tells it from the label.
-         */
-        #[ORM\Column(length: 255)]
-        private string $counterparty,
+        #[ORM\ManyToOne]
+        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+        private Counterparty $counterparty,
         /**
          * Whether its transactions are credits: a refund from a shop isn't one of its purchases.
          */
         #[ORM\Column]
         private bool $income,
-        #[ORM\Column(length: 255)]
-        private string $name,
         #[ORM\Column(enumType: Periodicity::class)]
         private Periodicity $periodicity,
         /**
@@ -93,9 +95,17 @@ class RecurringSeries
         return $this->account->getOwner();
     }
 
-    public function getCounterparty(): string
+    public function getCounterparty(): Counterparty
     {
         return $this->counterparty;
+    }
+
+    /**
+     * Its transactions tell another counterparty, now that they're told apart otherwise.
+     */
+    public function assignTo(Counterparty $counterparty): void
+    {
+        $this->counterparty = $counterparty;
     }
 
     public function getReference(): string
@@ -108,9 +118,23 @@ class RecurringSeries
         return $this->income;
     }
 
+    /**
+     * The name the user gave it, or else that of its counterparty, and of its contract if it has several: "Generali ·
+     * AU856955".
+     */
     public function getName(): string
     {
-        return $this->name;
+        return $this->name ?? $this->getDefaultName();
+    }
+
+    /**
+     * A name the same as that of its counterparty isn't one of its own: it follows the counterparty's, as a blank one
+     * does.
+     */
+    public function rename(?string $name): void
+    {
+        $name = trim((string) $name);
+        $this->name = '' === $name || $name === $this->getDefaultName() ? null : $name;
     }
 
     public function getStatus(): SeriesStatus
@@ -171,7 +195,7 @@ class RecurringSeries
     public function confirm(string $name, ?Category $category): void
     {
         $this->status = SeriesStatus::Confirmed;
-        $this->name = $name;
+        $this->rename($name);
         $this->category = $category;
     }
 
@@ -211,5 +235,10 @@ class RecurringSeries
         if (null !== $this->endedOn && $lastSeenOn->format('Y-m-d') > $this->endedOn->format('Y-m-d')) {
             $this->endedOn = null;
         }
+    }
+
+    private function getDefaultName(): string
+    {
+        return $this->counterparty->getName().('' === $this->reference ? '' : ' · '.strtoupper($this->reference));
     }
 }

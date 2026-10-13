@@ -3,20 +3,21 @@
 namespace App\Transfer;
 
 use App\Category\TransferCategory;
+use App\Counterparty\CounterpartyNormalizer;
 use App\Entity\Category;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Enum\TransactionKind;
-use App\Recurrence\CounterpartyNormalizer;
 use App\Repository\TransactionRepository;
 
 /**
  * Files the transfers an import brought in the user's "Transfers" category.
  *
  * A debit and a credit of the same amount, between two of the user's accounts and a few days apart, are the two sides
- * of money moved from one to the other: both leave the totals. A debit worded as a transfer, and that no account of
- * the user received, went to someone else: it's spent. A credit worded as a transfer, a salary or a refund, is left
- * alone. So is a transaction the user categorized already.
+ * of money moved from one to the other: both leave the totals. A transaction worded as a transfer, and that no account
+ * of the user sent or received, is money sent to someone else, spent, or received from someone else, earned. One the
+ * user categorized is neither; one they told what it is otherwise, of a series they confirmed (a salary for instance)
+ * or of a series or a counterparty they categorized, isn't filed as a transfer.
  */
 final readonly class TransferDetector
 {
@@ -28,7 +29,8 @@ final readonly class TransferDetector
     /**
      * How banks word a transfer, in the label's lowercase words: "Virement émis", "VIR INST vers…", "Wero vers…",
      * "Virement à : …" and "To …" (Revolut), "Paiement envoyé par…", "Sur la Pocket EUR Vacances depuis EUR",
-     * "Transfert depuis Compte personnel"...
+     * "Transfert depuis Compte personnel"... CounterpartyNormalizer::TRANSFER_PARTIES tells who with, from the same
+     * wordings.
      */
     private const array PATTERNS = [
         '/^virement\b/',
@@ -84,7 +86,7 @@ final readonly class TransferDetector
                     $side->markAsInternalTransfer();
                     self::file($side, $category);
                 }
-            } elseif ($transaction->getAmount() < 0 && $this->isWordedAsTransfer($transaction)) {
+            } elseif ($this->isWordedAsTransfer($transaction)) {
                 self::file($transaction, $category);
             }
         }
@@ -124,11 +126,11 @@ final readonly class TransferDetector
     }
 
     /**
-     * Unless its series files it elsewhere already: the rent paid by transfer stays in "Rent".
+     * Unless the user told what it is already: the rent paid by transfer stays in "Rent", the salary stays a salary.
      */
     private static function file(Transaction $transaction, Category $category): void
     {
-        if (null === $transaction->getCategory() && null === $transaction->getSeriesCategory()) {
+        if (!$transaction->isRecurring() && null === $transaction->getEffectiveCategory()) {
             $transaction->categorize($category);
         }
     }

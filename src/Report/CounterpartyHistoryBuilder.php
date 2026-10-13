@@ -3,7 +3,6 @@
 namespace App\Report;
 
 use App\Entity\Transaction;
-use App\Recurrence\CounterpartyNormalizer;
 use App\Repository\TransactionRepository;
 
 /**
@@ -16,7 +15,6 @@ final readonly class CounterpartyHistoryBuilder
 
     public function __construct(
         private TransactionRepository $transactions,
-        private CounterpartyNormalizer $normalizer,
     ) {
     }
 
@@ -54,8 +52,8 @@ final readonly class CounterpartyHistoryBuilder
     }
 
     /**
-     * Those of its series, once the user confirmed it; or else those whose label tells the same counterparty, in the
-     * same direction and currency.
+     * Those of its series, once the user confirmed it; or else those of its counterparty, in the same direction and
+     * currency.
      *
      * @return list<Transaction> most recent first
      */
@@ -66,14 +64,11 @@ final readonly class CounterpartyHistoryBuilder
             return $this->transactions->findOfSeries($series);
         }
 
-        $counterparty = $this->normalizer->normalize($transaction->getLabel());
-        if ('' === $counterparty || 0 === $transaction->getAmount()) {
+        $counterparty = $transaction->getCounterparty();
+        if (null === $counterparty || 0 === $transaction->getAmount()) {
             return [$transaction];
         }
 
-        return array_values(array_filter(
-            $this->transactions->findOfDirection($transaction->getAccount()->getOwner(), $transaction->getCurrency(), $transaction->getAmount() > 0),
-            fn (Transaction $other): bool => $this->normalizer->normalize($other->getLabel()) === $counterparty,
-        ));
+        return $this->transactions->findOfCounterparty($counterparty, $transaction->getCurrency(), $transaction->getAmount() > 0);
     }
 }

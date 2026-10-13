@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Enum\Bank;
 use App\Enum\CategoryRole;
 use App\Enum\Periodicity;
+use App\Enum\SeriesStatus;
 use App\Tests\EntityFactoryTrait;
 use App\Twig\Components\CategoryForm;
 use App\Twig\Components\TransactionCategory;
@@ -218,7 +219,7 @@ final class CategoryControllerTest extends WebTestCase
         $this->entityManager->flush();
 
         $account = $this->createAccount($this->user);
-        $edf = new RecurringSeries($account, 'edf', false, 'EDF', Periodicity::Monthly, -8500, 93, new \DateTimeImmutable('2026-09-05'));
+        $edf = new RecurringSeries($account, $this->createCounterparty($this->user, 'edf'), false, Periodicity::Monthly, -8500, 93, new \DateTimeImmutable('2026-09-05'));
         $edf->confirm('EDF', $energy);
         $this->entityManager->persist($edf);
         foreach (['2026-07-05' => -8500, '2026-08-05' => -8500, '2026-09-05' => -9200] as $date => $amount) {
@@ -228,6 +229,11 @@ final class CategoryControllerTest extends WebTestCase
         $loanPayment->categorize($loan);
         $this->createTransaction($account, '2026-08-20', 'LEROY MERLIN', -4250)->categorize($home);
         $this->createTransaction($account, '2026-09-12', 'CARREFOUR', -5000);
+        // Filed with all the transactions of its counterparty
+        $castorama = $this->createCounterparty($this->user, 'castorama');
+        $castorama->categorize($home);
+        $castorama->rename('Castorama');
+        $this->createTransaction($account, '2026-09-08', 'CASTORAMA', -1500);
         $this->entityManager->flush();
 
         $crawler = $this->client->request('GET', \sprintf('/categories/%d', $home->getId()));
@@ -236,12 +242,12 @@ final class CategoryControllerTest extends WebTestCase
         self::assertSelectorTextContains('h1', 'Home');
         self::assertSelectorExists('header nav a[href="/categories"][aria-current="page"]');
         self::assertSame(
-            ['2026-07' => '-8500', '2026-08' => '-12750', '2026-09' => '-94200'],
+            ['2026-07' => '-8500', '2026-08' => '-12750', '2026-09' => '-95700'],
             array_combine($crawler->filter('[data-month]')->each(static fn ($bar): string => (string) $bar->attr('data-month')), $crawler->filter('[data-month]')->each(static fn ($bar): string => (string) $bar->attr('data-amount'))),
         );
-        self::assertSelectorTextContains('[data-currency="EUR"]', '-€384.83 a month on average, over 3 months');
+        self::assertSelectorTextContains('[data-currency="EUR"]', '-€389.83 a month on average, over 3 months');
         self::assertSelectorExists('[data-month="2026-09"][aria-current="true"]');
-        self::assertSame(['10 Sep Prélèvement · ECHEANCE PRET Loan -€850.00', '5 Sep EDF Energy -€92.00'], $crawler->filter('[data-transaction]')->each(static fn ($row): string => (string) preg_replace('/\s+/u', ' ', trim($row->text()))));
+        self::assertSame(['10 Sep Prélèvement · ECHEANCE PRET Loan -€850.00', '8 Sep Castorama -€15.00', '5 Sep EDF Energy -€92.00'], $crawler->filter('[data-transaction]')->each(static fn ($row): string => (string) preg_replace('/\s+/u', ' ', trim($row->text()))));
         self::assertSelectorTextSame(\sprintf('[data-transaction] a[href="/transactions/%d"]', $loanPayment->getId()), 'Prélèvement · ECHEANCE PRET');
 
         // Another month, a subcategory
@@ -252,6 +258,28 @@ final class CategoryControllerTest extends WebTestCase
 
         $this->client->request('GET', \sprintf('/categories/%d?month=2026-13', $energy->getId()));
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testCountsATransactionInTheCategoryItCountsIn(): void
+    {
+        $shopping = $this->createCategory($this->user, 'Shopping');
+        $subscriptions = $this->createCategory($this->user, 'Subscriptions');
+        $account = $this->createAccount($this->user);
+        $this->createCounterparty($this->user, 'amazon')->categorize($shopping);
+        // Confirmed of no category: that of its counterparty
+        $prime = $this->createSeries($account, 'Amazon', -699, '2026-09-05');
+        $this->createTransaction($account, '2026-09-05', 'AMAZON', -699)->attachTo($prime);
+        // Only suggested: its category doesn't count, that of its counterparty does
+        $suggested = $this->createSeries($account, 'Netflix', -1349, '2026-09-20', status: SeriesStatus::Suggested, category: $subscriptions);
+        $this->createCounterparty($this->user, 'netflix')->categorize($shopping);
+        $this->createTransaction($account, '2026-09-20', 'NETFLIX', -1349)->attachTo($suggested);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', \sprintf('/categories/%d?month=2026-09', $shopping->getId()));
+        self::assertSame(['20 Sep NETFLIX -€13.49', '5 Sep Amazon -€6.99'], $crawler->filter('[data-transaction]')->each(static fn ($row): string => (string) preg_replace('/\s+/u', ' ', trim($row->text()))));
+
+        $this->client->request('GET', \sprintf('/categories/%d?month=2026-09', $subscriptions->getId()));
+        self::assertSelectorNotExists('[data-transaction]');
     }
 
     public function testCategorisesATransactionOverItsSeries(): void
