@@ -1,0 +1,118 @@
+{% extends 'layout.html.twig' %}
+
+{% set transaction = history.transaction %}
+{% set currency = history.currency %}
+{% set label = transaction.label|split("\n") %}
+
+{% block title %}{{ transaction.name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-3">
+    <a href="{{ path('app_dashboard', {month: transaction.date|date('Y-m')}) }}" class="w-fit text-sm text-muted-foreground hover:underline" data-back>
+        {{- 'transaction.show.back'|trans({month: transaction.date|format_date(pattern: 'LLLL y')|capitalize}) -}}
+    </a>
+
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex items-center gap-2">
+                <twig:CategoryIcon :category="transaction.effectiveCategory" class="size-5" />
+                <h1 class="text-2xl font-bold tracking-tight break-words">{{ transaction.recurring ? transaction.name : label|first }}</h1>
+            </div>
+            {# The name of its series first, over the whole label #}
+            {% for line in transaction.recurring ? label : label|slice(1) %}
+                <p class="text-sm break-words text-muted-foreground">{{ line }}</p>
+            {% endfor %}
+        </div>
+        <twig:Money :amount="transaction.amount" :currency="currency" signed class="text-2xl font-semibold tracking-tight" />
+    </div>
+
+    <dl class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {% for term, value in {
+            'transaction.show.date': transaction.date|format_date('long'),
+            'dashboard.detail.account': transaction.account.label,
+            'dashboard.detail.bank': transaction.account.bank.label,
+            'dashboard.detail.bank_category': transaction.bankCategory,
+        }|filter(value => value) %}
+            <div class="flex gap-1" data-detail="{{ term|split('.')|last }}">
+                <dt class="font-medium">{{ term|trans }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+        {% endfor %}
+        <twig:TransactionCategory :transaction="transaction" key="transaction-category-{{ transaction.id }}" />
+        {% if transaction.recurring %}
+            <twig:Badge variant="secondary" data-recurring>{{ 'dashboard.detail.series'|trans }} · {{ ('recurrence.periodicity.' ~ transaction.recurringSeries.periodicity.value)|trans }}</twig:Badge>
+        {% endif %}
+        {% if transaction.kind.value == 'deferred_card_purchase' %}
+            <twig:Badge variant="secondary">{{ 'dashboard.detail.deferred_card_purchase'|trans }}</twig:Badge>
+        {% endif %}
+        {% if transaction.internalTransfer %}
+            <twig:Badge variant="secondary" data-internal-transfer>{{ 'dashboard.detail.internal_transfer'|trans }}</twig:Badge>
+        {% endif %}
+    </dl>
+</div>
+
+{% if history.count == 1 %}
+    <twig:Card class="px-6 py-10 text-center text-sm text-muted-foreground" data-only-once>{{ 'transaction.show.only_once'|trans }}</twig:Card>
+{% else %}
+    <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {% for tile in [
+            {stat: 'total', amount: history.total, note: 'transaction.show.count'|trans({count: history.count})},
+            {stat: 'average', amount: history.average, note: history.periodMonths > 1 ? 'transaction.show.monthly_average'|trans({amount: history.monthlyAverage|major_units(currency)|format_currency(currency)})},
+            {stat: 'period', value: 'transaction.show.since'|trans({date: history.first.date|format_date('medium')}), note: 'transaction.show.period_months'|trans({count: history.periodMonths, last: history.last.date|format_date('medium')})},
+            {stat: 'range', value: 'transaction.show.range_from_to'|trans({smallest: history.smallest.amount|major_units(currency)|format_currency(currency), largest: history.largest.amount|major_units(currency)|format_currency(currency)})},
+        ] %}
+            <twig:Card class="gap-1 px-6 py-5" data-stat="{{ tile.stat }}">
+                <dt class="text-sm text-muted-foreground">{{ ('transaction.show.' ~ tile.stat)|trans }}</dt>
+                <dd class="flex flex-col gap-0.5">
+                    {% if tile.amount is defined %}
+                        <twig:Money :amount="tile.amount" :currency="currency" signed class="text-2xl font-semibold tracking-tight" />
+                    {% else %}
+                        <span class="text-lg font-semibold tracking-tight">{{ tile.value }}</span>
+                    {% endif %}
+                    {% if tile.note ?? false %}
+                        <span class="text-xs text-muted-foreground">{{ tile.note }}</span>
+                    {% endif %}
+                </dd>
+            </twig:Card>
+        {% endfor %}
+    </dl>
+
+    <twig:Card>
+        <twig:Card:Header>
+            <twig:Card:Title><h2>{{ 'transaction.show.by_month'|trans }}</h2></twig:Card:Title>
+            <twig:Card:Description>{{ 'transaction.show.by_month_average'|trans({amount: history.monthlyAverage|major_units(currency)|format_currency(currency)}) }}</twig:Card:Description>
+        </twig:Card:Header>
+        <twig:Card:Content>
+            <twig:MonthlyBars
+                :months="history.months"
+                :amounts="history.amounts"
+                :currency="currency"
+                :max="history.maxAmount"
+                :average="history.monthlyAverage"
+                :selected="transaction.date"
+                label="{{ 'transaction.show.by_month'|trans }}"
+            />
+        </twig:Card:Content>
+    </twig:Card>
+
+    <twig:Card class="gap-0 py-0">
+        <div class="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
+            <h2 class="font-semibold">{{ 'transaction.show.history'|trans }}</h2>
+            <span class="text-sm text-muted-foreground">{{ 'transaction.show.count'|trans({count: history.count}) }}</span>
+        </div>
+        <ul class="divide-y">
+            {% for occurrence in history.occurrences %}
+                {% set current = occurrence == transaction %}
+                <li class="relative flex items-center gap-4 px-4 py-2.5 hover:bg-muted/50 aria-[current=true]:bg-muted sm:px-6" aria-current="{{ current ? 'true' : 'false' }}" data-occurrence>
+                    <time datetime="{{ occurrence.date|date('Y-m-d') }}" class="w-24 shrink-0 text-xs text-muted-foreground tabular-nums">{{ occurrence.date|format_date('medium') }}</time>
+                    <a href="{{ path('app_transaction_show', {id: occurrence.id}) }}" class="min-w-0 flex-1 truncate text-sm outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset" title="{{ occurrence.oneLineLabel }}">
+                        {{- occurrence.oneLineLabel -}}
+                    </a>
+                    <span class="hidden shrink-0 text-xs text-muted-foreground sm:inline">{{ occurrence.account.label }}</span>
+                    <twig:Money :amount="occurrence.amount" :currency="currency" signed class="text-sm font-medium" />
+                </li>
+            {% endfor %}
+        </ul>
+    </twig:Card>
+{% endif %}
+{% endblock %}

@@ -65,6 +65,24 @@ dashboard:
         waiting_for_month_end: 'Vos relevés ne contenaient que des transactions du mois en cours : exportez un nouveau relevé une fois le mois terminé, à partir du {date}.'
         import: Importer des relevés
 
+transaction:
+    show:
+        back: '← {month}'
+        date: Date
+        total: Total
+        count: '{count, plural, one {en une opération} other {en # opérations}}'
+        average: Moyenne par opération
+        monthly_average: '{amount} par mois'
+        period: Période
+        since: 'Depuis le {date}'
+        period_months: '{count, plural, one {Sur un mois, jusqu’au {last}} other {Sur # mois, jusqu’au {last}}}'
+        range: Montants
+        range_from_to: 'De {smallest} à {largest}'
+        by_month: Mois par mois
+        by_month_average: '{amount} par mois en moyenne sur la période'
+        history: Historique
+        only_once: Seule opération avec cet interlocuteur pour l’instant.
+
 locale:
     switcher: Langue
 

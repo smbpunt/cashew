@@ -1,0 +1,45 @@
+{%- props
+    ## list<\DateTimeImmutable> The first day of each month, oldest first.
+    months,
+    ## array<string, int> In minor units (cents), by month ("Y-m"), every month there.
+    amounts,
+    ## string ISO 4217 code.
+    currency,
+    ## int The largest amount of a month, at the top of the columns.
+    max,
+    ## int A dashed line at that amount; none at 0.
+    average = 0,
+    ## \DateTimeImmutable The month to highlight.
+    selected,
+    ## string|null The route each column leads to, with the month in its query; no links without it.
+    route = null,
+    ## array The other parameters of the route.
+    params = {},
+    ## string What the chart shows.
+    label
+-%}
+{# Columns from one baseline, at scale with the largest month; the average as a dashed line #}
+<div {{ attributes.defaults({class: 'relative flex h-48 items-stretch gap-1 border-b border-border'}) }} role="list" aria-label="{{ label }}">
+    {% if average != 0 %}
+        <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 border-t border-dashed border-muted-foreground/50" style="bottom: {{ (average|abs / max * 100)|round(2) }}%"></div>
+    {% endif %}
+    {% for month in months %}
+        {% set key = month|date('Y-m') %}
+        {% set amount = amounts[key] %}
+        {% set current = key == selected|date('Y-m') %}
+        {% set title = month|format_date(pattern: 'LLLL y')|capitalize ~ ' : ' ~ amount|major_units(currency)|format_currency(currency) %}
+        {% set tag = route ? 'a' : 'div' %}
+        <{{ tag }} role="listitem" {% if route %}href="{{ path(route, params|merge({month: key})) }}" {% else %}tabindex="0" {% endif %}
+            class="group relative flex flex-1 items-end justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            aria-label="{{ title }}" aria-current="{{ current ? 'true' : 'false' }}" data-month="{{ key }}" data-amount="{{ amount }}"
+        >
+            <span class="w-full max-w-6 rounded-t-[4px] {{ current ? 'bg-primary' : 'bg-primary/35 group-hover:bg-primary/60 soft:bg-primary/70 soft:group-hover:bg-primary/85' }}" style="height: {{ (amount|abs / max * 100)|round(2) }}%"></span>
+            <span role="tooltip" class="pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded-md bg-popover px-2 py-1 text-xs whitespace-nowrap text-popover-foreground shadow-md ring-1 ring-foreground/10 group-hover:block group-focus-visible:block">{{ title }}</span>
+        </{{ tag }}>
+    {% endfor %}
+</div>
+<div aria-hidden="true" class="mt-1 flex gap-1 text-[0.65rem] text-muted-foreground">
+    {% for month in months %}
+        <span class="flex-1 truncate text-center {{ month|date('Y-m') == selected|date('Y-m') ? 'font-medium text-foreground' }}">{{ month|format_date(pattern: 'MMM') }}</span>
+    {% endfor %}
+</div>

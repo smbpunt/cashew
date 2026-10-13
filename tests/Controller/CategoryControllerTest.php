@@ -224,7 +224,8 @@ final class CategoryControllerTest extends WebTestCase
         foreach (['2026-07-05' => -8500, '2026-08-05' => -8500, '2026-09-05' => -9200] as $date => $amount) {
             $this->createTransaction($account, $date, "Prélèvement\nEDF", $amount)->attachTo($edf);
         }
-        $this->createTransaction($account, '2026-09-10', "Prélèvement\nECHEANCE PRET", -85000)->categorize($loan);
+        $loanPayment = $this->createTransaction($account, '2026-09-10', "Prélèvement\nECHEANCE PRET", -85000);
+        $loanPayment->categorize($loan);
         $this->createTransaction($account, '2026-08-20', 'LEROY MERLIN', -4250)->categorize($home);
         $this->createTransaction($account, '2026-09-12', 'CARREFOUR', -5000);
         $this->entityManager->flush();
@@ -241,6 +242,7 @@ final class CategoryControllerTest extends WebTestCase
         self::assertSelectorTextContains('[data-currency="EUR"]', '-€384.83 a month on average, over 3 months');
         self::assertSelectorExists('[data-month="2026-09"][aria-current="true"]');
         self::assertSame(['10 Sep Prélèvement · ECHEANCE PRET Loan -€850.00', '5 Sep EDF Energy -€92.00'], $crawler->filter('[data-transaction]')->each(static fn ($row): string => (string) preg_replace('/\s+/u', ' ', trim($row->text()))));
+        self::assertSelectorTextSame(\sprintf('[data-transaction] a[href="/transactions/%d"]', $loanPayment->getId()), 'Prélèvement · ECHEANCE PRET');
 
         // Another month, a subcategory
         $this->client->request('GET', \sprintf('/categories/%d?month=2026-08', $energy->getId()));

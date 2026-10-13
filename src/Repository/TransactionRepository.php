@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\BankAccount;
 use App\Entity\Category;
+use App\Entity\RecurringSeries;
 use App\Entity\StatementImport;
 use App\Entity\Transaction;
 use App\Entity\User;
@@ -243,6 +244,43 @@ class TransactionRepository extends ServiceEntityRepository
             ->setParameter('confirmed', SeriesStatus::Confirmed)
             ->setParameter('start', $start, Types::DATE_IMMUTABLE)
             ->setParameter('end', $end, Types::DATE_IMMUTABLE)
+            ->orderBy('t.date', 'DESC')
+            ->addOrderBy('t.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * The transactions of the series, most recent first.
+     *
+     * @return list<Transaction>
+     */
+    public function findOfSeries(RecurringSeries $series): array
+    {
+        return $this->withCategories($this->createQueryBuilder('t'))
+            ->addSelect('a')
+            ->join('t.account', 'a')
+            ->where('t.recurringSeries = :series')
+            ->setParameter('series', $series)
+            ->orderBy('t.date', 'DESC')
+            ->addOrderBy('t.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * The owner's credits, or debits, in the currency, most recent first, deferred card settlements aside: those
+     * among which to find the other transactions of a counterparty.
+     *
+     * @return list<Transaction>
+     */
+    public function findOfDirection(User $owner, string $currency, bool $income): array
+    {
+        return $this->withCategories($this->ownedWithoutSettlements($owner))
+            ->addSelect('a')
+            ->andWhere('t.currency = :currency')
+            ->andWhere($income ? 't.amount > 0' : 't.amount < 0')
+            ->setParameter('currency', $currency)
             ->orderBy('t.date', 'DESC')
             ->addOrderBy('t.id', 'DESC')
             ->getQuery()

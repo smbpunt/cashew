@@ -103,7 +103,7 @@ final class DashboardControllerTest extends WebTestCase
             '15 Sep Prélèvement · FREE MOBILE',
             '10 Sep Cinéma',
             '2 Sep BOULANGERIE DU PORT',
-        ], $crawler->filter('[data-transaction]')->each(static fn ($row): string => $row->filter('time')->text().' '.$row->filter('p')->first()->text()));
+        ], $crawler->filter('[data-transaction]')->each(static fn ($row): string => $row->filter('time')->text().' '.$row->filter('a')->first()->text()));
 
         self::assertSelectorExists('a[rel="prev"][href="/dashboard?month=2026-08"]');
         self::assertSelectorExists('button[disabled][aria-label="Next month"]');
@@ -173,11 +173,12 @@ final class DashboardControllerTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/dashboard?month=2026-09&mode='.$mode);
 
-        self::assertSelectorTextSame('[data-transaction]:nth-child(3) p', 'Phone plan');
-        self::assertSelectorTextSame('[data-transaction]:nth-child(4) p', 'Cinéma');
+        // Leading to the transaction, out of the frame of the list
+        self::assertSelectorTextSame(\sprintf('[data-transaction]:nth-child(3) a[href="/transactions/%d"][data-turbo-frame="_top"]', $free->getId()), 'Phone plan');
+        self::assertSelectorTextSame(\sprintf('[data-transaction]:nth-child(4) a[href="/transactions/%d"][data-turbo-frame="_top"]', $cinema->getId()), 'Cinéma');
         if ('simple' === $mode) {
             // The label of the statement, on hover
-            self::assertSelectorExists('[data-transaction]:nth-child(3) p[title="Prélèvement · FREE MOBILE"]');
+            self::assertSelectorExists('[data-transaction]:nth-child(3) a[title="Prélèvement · FREE MOBILE"]');
         } else {
             // Over the whole label, and marked as recurring
             self::assertSame(['Phone plan', 'Prélèvement', 'FREE MOBILE'], $crawler->filter('[data-transaction]:nth-child(3) p')->each(static fn ($line): string => $line->text()));

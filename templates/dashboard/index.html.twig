@@ -124,7 +124,9 @@
                                 <div class="flex min-w-0 flex-1 flex-col gap-1">
                                     <div>
                                         {# The name of its series first, over the whole label #}
-                                        <p class="text-sm font-medium break-words">{{ transaction.recurring ? transaction.name : label|first }}</p>
+                                        <p class="text-sm font-medium break-words">
+                                            <a href="{{ path('app_transaction_show', {id: transaction.id}) }}" data-turbo-frame="_top" class="hover:underline">{{ transaction.recurring ? transaction.name : label|first }}</a>
+                                        </p>
                                         {% for line in transaction.recurring ? label : label|slice(1) %}
                                             <p class="text-xs break-words text-muted-foreground">{{ line }}</p>
                                         {% endfor %}
@@ -159,12 +161,13 @@
                 {% else %}
                     <ul class="divide-y">
                         {% for transaction in report.transactions %}
-                            <li class="flex items-center gap-4 px-4 py-2.5 sm:px-6" data-transaction>
+                            {# The whole row leads to the transaction, its name the link #}
+                            <li class="relative flex items-center gap-4 px-4 py-2.5 hover:bg-muted/50 sm:px-6" data-transaction>
                                 <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">
                                     {{- transaction.date|format_date(pattern: 'd MMM') -}}
                                 </time>
                                 <twig:CategoryIcon :category="transaction.effectiveCategory" />
-                                <p class="min-w-0 flex-1 truncate text-sm font-medium" title="{{ transaction.oneLineLabel }}">{{ transaction.name }}</p>
+                                <a href="{{ path('app_transaction_show', {id: transaction.id}) }}" data-turbo-frame="_top" class="min-w-0 flex-1 truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset" title="{{ transaction.oneLineLabel }}">{{ transaction.name }}</a>
                                 <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
                             </li>
                         {% endfor %}

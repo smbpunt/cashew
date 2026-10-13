@@ -65,6 +65,24 @@ dashboard:
         waiting_for_month_end: 'Your statements only held transactions of the month in progress: export a new statement once it''s over, from {date}.'
         import: Import statements
 
+transaction:
+    show:
+        back: '← {month}'
+        date: Date
+        total: Total
+        count: '{count, plural, one {in one transaction} other {in # transactions}}'
+        average: Average per transaction
+        monthly_average: '{amount} a month'
+        period: Period
+        since: 'Since {date}'
+        period_months: '{count, plural, one {Over one month, up to {last}} other {Over # months, up to {last}}}'
+        range: Amounts
+        range_from_to: 'From {smallest} to {largest}'
+        by_month: Month by month
+        by_month_average: '{amount} a month on average over the period'
+        history: History
+        only_once: The only transaction with this counterparty so far.
+
 locale:
     switcher: Language
 
