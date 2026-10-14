@@ -15,6 +15,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class CreateUserCommandTest extends KernelTestCase
 {
     private const string PASSWORD = 'Correct-Horse-Battery-9';
+    private const string PASSWORD_ENV = 'CREATE_USER_TEST_PASSWORD';
 
     private CommandTester $commandTester;
 
@@ -27,6 +28,13 @@ final class CreateUserCommandTest extends KernelTestCase
             ->execute();
 
         $this->commandTester = new CommandTester(new Application($kernel)->find('app:create-user'));
+    }
+
+    protected function tearDown(): void
+    {
+        putenv(self::PASSWORD_ENV);
+
+        parent::tearDown();
     }
 
     public function testItAsksForLoginAndPasswordAndStoresAHashedPassword(): void
@@ -152,5 +160,62 @@ final class CreateUserCommandTest extends KernelTestCase
         self::assertSame(Command::FAILURE, $this->commandTester->getStatusCode());
         self::assertStringContainsString('The passwords do not match.', $this->commandTester->getDisplay());
         self::assertNull(self::getContainer()->get(UserRepository::class)->findOneBy(['login' => 'alice']));
+    }
+
+    public function testReadsThePasswordFromAnEnvironmentVariableWithoutAsking(): void
+    {
+        putenv(self::PASSWORD_ENV.'='.self::PASSWORD);
+
+        $this->commandTester->execute(['login' => 'alice', '--password-env' => self::PASSWORD_ENV], ['interactive' => false]);
+
+        $this->commandTester->assertCommandIsSuccessful();
+        $user = self::getContainer()->get(UserRepository::class)->findOneBy(['login' => 'alice']);
+        self::assertInstanceOf(User::class, $user);
+        self::assertTrue(self::getContainer()->get(UserPasswordHasherInterface::class)->isPasswordValid($user, self::PASSWORD));
+    }
+
+    public function testRefusesAWeakPasswordFromTheEnvironment(): void
+    {
+        putenv(self::PASSWORD_ENV.'=short');
+
+        $this->commandTester->execute(['login' => 'alice', '--password-env' => self::PASSWORD_ENV], ['interactive' => false]);
+
+        self::assertSame(Command::FAILURE, $this->commandTester->getStatusCode());
+        self::assertStringContainsString(self::PASSWORD_ENV.': This value is too short.', $this->commandTester->getDisplay());
+        self::assertCount(0, self::getContainer()->get(UserRepository::class)->findAll());
+    }
+
+    public function testFailsWhenThePasswordVariableIsNotSet(): void
+    {
+        $this->commandTester->execute(['login' => 'alice', '--password-env' => self::PASSWORD_ENV], ['interactive' => false]);
+
+        self::assertSame(Command::FAILURE, $this->commandTester->getStatusCode());
+        self::assertStringContainsString('The environment variable "'.self::PASSWORD_ENV.'" is not set.', $this->commandTester->getDisplay());
+        self::assertCount(0, self::getContainer()->get(UserRepository::class)->findAll());
+    }
+
+    public function testLeavesAnExistingUserAsIsWhenAskedToCreateItIfMissing(): void
+    {
+        $this->commandTester->setInputs([self::PASSWORD, self::PASSWORD]);
+        $this->commandTester->execute(['login' => 'alice']);
+        putenv(self::PASSWORD_ENV.'=Another-Correct-Horse-7');
+
+        $this->commandTester->execute(['login' => 'ALICE', '--password-env' => self::PASSWORD_ENV, '--if-missing' => true], ['interactive' => false]);
+
+        $this->commandTester->assertCommandIsSuccessful();
+        self::assertStringContainsString('User "alice" exists already: left as is.', $this->commandTester->getDisplay());
+        $users = self::getContainer()->get(UserRepository::class)->findAll();
+        self::assertCount(1, $users);
+        self::assertTrue(self::getContainer()->get(UserPasswordHasherInterface::class)->isPasswordValid($users[0], self::PASSWORD));
+    }
+
+    public function testCreatesTheUserWhenAskedToCreateItIfMissing(): void
+    {
+        putenv(self::PASSWORD_ENV.'='.self::PASSWORD);
+
+        $this->commandTester->execute(['login' => 'alice', '--password-env' => self::PASSWORD_ENV, '--if-missing' => true], ['interactive' => false]);
+
+        $this->commandTester->assertCommandIsSuccessful();
+        self::assertStringContainsString('User "alice" created.', $this->commandTester->getDisplay());
     }
 }

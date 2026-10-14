@@ -50,6 +50,11 @@ LOCK_DSN=postgresql+advisory://app:CHANGE_ME@cashew-db:5432/app
 # Two different long random texts, given by `openssl rand -hex 32`
 APP_SECRET=CHANGE_ME
 MERCURE_JWT_SECRET=CHANGE_ME
+
+# Your account, created at the first start: changing them afterwards changes nothing
+# Login: letters, digits, and . _ - between them. Password: 12 characters at least, hard to guess
+CASHEW_LOGIN=CHANGE_ME
+CASHEW_PASSWORD=CHANGE_ME
 ```
 
 Then `compose.yaml`, in the same folder, nothing to change:
@@ -99,13 +104,13 @@ services:
     restart: unless-stopped
 ```
 
-Then `docker compose up -d` from `cashew/`, and create your user, which asks for a login and a password:
+Then `docker compose up -d` from `cashew/`, open `https://<SERVER_NAME>` and log in with `CASHEW_LOGIN` and `CASHEW_PASSWORD`. Once your account exists, you can remove `CASHEW_PASSWORD` from `cashew.env`.
+
+To create another user, which asks for a login and a password:
 
 ```bash
 docker compose run --rm cashew-worker php bin/console app:create-user
 ```
-
-Open `https://<SERVER_NAME>` and log in.
 
 To update: `docker compose pull && docker compose up -d`. The database follows on its own.
 

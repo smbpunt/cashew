@@ -49,6 +49,11 @@ if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 		if find ./migrations -iname '*.php' -print -quit | grep --quiet .; then
 			php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing
 		fi
+
+		# The account given by CASHEW_LOGIN and CASHEW_PASSWORD, created at the first start only
+		if [ -n "$CASHEW_LOGIN" ]; then
+			php bin/console app:create-user "$CASHEW_LOGIN" --password-env=CASHEW_PASSWORD --if-missing --no-interaction
+		fi
 	fi
 
 	echo 'PHP app ready!'
