@@ -177,7 +177,7 @@ RUN chmod g=u /app/var
 
 COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 
-USER www-data
+# Starts as root: the entrypoint then switches to PUID/PGID (www-data by default)
 
 WORKDIR /app
 

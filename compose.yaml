@@ -41,7 +41,7 @@ services:
     environment: *php_environment
     # Bypass the app entrypoint (composer install, migrations): the php service already runs it
     entrypoint: ["docker-php-entrypoint"]
-    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=256M"]
+    command: ["php", "bin/console", "messenger:consume", "async", "--memory-limit=256M"]
     # The image's healthcheck probes FrankenPHP, which doesn't run here (and would fail "up --wait")
     healthcheck:
       disable: true

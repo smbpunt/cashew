@@ -1,6 +1,19 @@
 #!/bin/sh
 set -e
 
+# Prod: like the linuxserver images, PUID/PGID pick the user.
+# It gets the mounted folders (/data, /config) and var/, then the app runs under its name.
+if [ "$(id -u)" = '0' ] && [ "$APP_ENV" = 'prod' ]; then
+	PUID=${PUID:-33}
+	PGID=${PGID:-33}
+	chown -R "$PUID:$PGID" /data /config var
+	exec setpriv --reuid="$PUID" --regid="$PGID" --clear-groups "$0" "$@"
+fi
+
+# The Mercure hub checks the app's tokens against the app's own secret, unless given its keys
+export MERCURE_PUBLISHER_JWT_KEY="${MERCURE_PUBLISHER_JWT_KEY:-$MERCURE_JWT_SECRET}"
+export MERCURE_SUBSCRIBER_JWT_KEY="${MERCURE_SUBSCRIBER_JWT_KEY:-$MERCURE_JWT_SECRET}"
+
 if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 
 	if [ -z "$(ls -A 'vendor/' 2>/dev/null)" ]; then

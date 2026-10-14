@@ -1,60 +1,184 @@
-# Symfony Docker
+# Cashew
 
-A [Docker](https://www.docker.com/)-based installer and runtime for the [Symfony](https://symfony.com) web framework,
-with [FrankenPHP](https://frankenphp.dev) and [Caddy](https://caddyserver.com/) inside!
+> 100% vibe coded with Claude Code / Opus 5.5
 
-Coding-agents ready: ships with a [Dev Container](https://containers.dev/) and a [one-page guide](docs/agents.md)
-to run [OpenCode](https://opencode.ai), [Claude Code](https://claude.ai/claude-code), or any AI coding assistant,
-against a local or a remote model, with an optional network sandbox.
+Personal web app to see where your money goes: import your bank statements (Crédit Agricole and Revolut CSV exports), then get every month's income and spending at a glance, by category, with a calendar of the month and the subscriptions still going on.
 
-![CI](https://github.com/dunglas/symfony-docker/workflows/CI/badge.svg)
+## Run with Docker
 
-## Getting Started
+> [!WARNING]
+> Cashew is vibe coded and has not been security audited. Keep it on your local network, or reach it through a VPN: do not expose it to the Internet.
 
-1. If not already done, [install Docker Compose](https://docs.docker.com/compose/install/) (v2.10+)
-2. Run `docker compose build --pull --no-cache` to build fresh images
-3. Run `docker compose up --wait` to set up and start a fresh Symfony project
-4. Open `https://localhost` in your favorite web browser and [accept the auto-generated TLS certificate](https://stackoverflow.com/a/15076602/1352334)
-5. Run `docker compose down --remove-orphans` to stop the Docker containers.
+No need to clone the repository. Everything lives in one `cashew/` folder:
 
-## Features
+```
+cashew/
+├── compose.yaml
+├── cashew.env      # your settings
+├── caddy/          # certificates
+├── database/
+└── share/          # statements waiting to be imported
+```
 
-- Production, development and CI ready
-- Just 1 service by default
-- Super-readable configuration
-- Blazing-fast performance thanks to [the worker mode of FrankenPHP](https://frankenphp.dev/docs/worker/)
-- [Installation of extra Docker Compose services](docs/extra-services.md) with Symfony Flex
-- Automatic HTTPS (in dev and prod)
-- HTTP/3 and [Early Hints](https://symfony.com/blog/new-in-symfony-6-3-early-hints) support
-- Real-time messaging thanks to a built-in [Mercure hub](https://symfony.com/doc/current/mercure.html)
-- [Vulcain](https://vulcain.rocks) support
-- Native [XDebug](docs/xdebug.md) integration
-- [Hot Reloading](https://frankenphp.dev/docs/hot-reload/)
-- [Dev Container](https://containers.dev/) support
-- [AI coding agents](docs/agents.md) with an optional network sandbox
-- Rootless, slim production image
+```bash
+mkdir -p cashew/caddy/data cashew/caddy/config cashew/database cashew/share
+cd cashew
+```
 
-**Enjoy!**
+In `cashew/`, create `cashew.env` with your settings and replace every `CHANGE_ME`:
 
-## Docs
+```dotenv
+# Your user and group, given by the `id` command: they own the caddy/ and share/ folders
+PUID=1000
+PGID=1000
 
-1. [Options available](docs/options.md)
-2. [Using Symfony Docker with an existing project](docs/existing-project.md)
-3. [Support for extra services](docs/extra-services.md)
-4. [Deploying in production](docs/production.md)
-5. [Debugging with Xdebug](docs/xdebug.md)
-6. [TLS Certificates](docs/tls.md)
-7. [Using MySQL instead of PostgreSQL](docs/mysql.md)
-8. [Using Alpine Linux instead of Debian](docs/alpine.md)
-9. [Using a Makefile](docs/makefile.md)
-10. [Updating the template](docs/updating.md)
-11. [Troubleshooting](docs/troubleshooting.md)
-12. [Using AI coding agents](docs/agents.md)
+# Server IP or domain name, then the address the worker reaches the app at (keep ", cashew:80")
+SERVER_NAME=127.0.0.1, cashew:80
+# Same IP or domain name as SERVER_NAME
+CADDY_GLOBAL_OPTIONS=default_sni 127.0.0.1
+# The address you open, then the same followed by /.well-known/mercure
+DEFAULT_URI=https://127.0.0.1
+MERCURE_PUBLIC_URL=https://127.0.0.1/.well-known/mercure
+# Nothing to change
+MERCURE_URL=http://cashew/.well-known/mercure
+
+# Database password (letters and digits only), written three times
+POSTGRES_PASSWORD=CHANGE_ME
+DATABASE_URL=postgresql://app:CHANGE_ME@cashew-db:5432/app?serverVersion=18
+LOCK_DSN=postgresql+advisory://app:CHANGE_ME@cashew-db:5432/app
+
+# Two different long random texts, given by `openssl rand -hex 32`
+APP_SECRET=CHANGE_ME
+MERCURE_JWT_SECRET=CHANGE_ME
+```
+
+Then `compose.yaml`, in the same folder, nothing to change:
+
+```yaml
+services:
+  cashew:
+    image: smbpunt/cashew-php-prod:latest
+    container_name: cashew
+    env_file: cashew.env
+    volumes:
+      - ./caddy/data:/data # certificates
+      - ./caddy/config:/config
+      - ./share:/app/var/share # statements waiting for the worker
+    ports:
+      - 80:80 # HTTP
+      - 443:443 # HTTPS
+      - 443:443/udp # HTTP/3 (optional)
+    depends_on:
+      - cashew-db
+    restart: unless-stopped
+
+  # Imports the statements in the background
+  cashew-worker:
+    image: smbpunt/cashew-php-prod:latest
+    container_name: cashew-worker
+    command: php bin/console messenger:consume async --memory-limit=256M
+    env_file: cashew.env
+    volumes:
+      - ./share:/app/var/share
+    depends_on:
+      cashew:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+  cashew-db:
+    image: postgres:18-alpine
+    container_name: cashew-db
+    env_file: cashew.env
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_DB=app
+    volumes:
+      - ./database:/var/lib/postgresql
+    restart: unless-stopped
+```
+
+Then `docker compose up -d` from `cashew/`, and create your user, which asks for a login and a password:
+
+```bash
+docker compose run --rm cashew-worker php bin/console app:create-user
+```
+
+Open `https://<SERVER_NAME>` and log in.
+
+To update: `docker compose pull && docker compose up -d`. The database follows on its own.
+
+### Other ports
+
+In `compose.yaml`, change the left number only, for example `8443:443`. The address becomes `https://<SERVER_NAME>:8443`: add `:8443` to `DEFAULT_URI` and `MERCURE_PUBLIC_URL` too. With a domain name and a Let's Encrypt certificate, keep 80 and 443.
+
+### Behind your own reverse proxy
+
+If nginx, Traefik, Nginx Proxy Manager or Synology already handles the certificate, Cashew serves plain HTTP behind it. In `cashew.env`:
+
+```dotenv
+# HTTP only, no certificate
+SERVER_NAME=:80
+# Trust the proxy
+SYMFONY_TRUSTED_PROXIES=private_ranges
+# The address the proxy serves, over HTTPS
+DEFAULT_URI=https://cashew.example.com
+MERCURE_PUBLIC_URL=https://cashew.example.com/.well-known/mercure
+# Remove the CADDY_GLOBAL_OPTIONS line, keep the others
+```
+
+In `compose.yaml`, replace the three `ports` lines with `- 8080:80`. The proxy forwards `https://<your domain>` to `http://<server>:8080`.
+
+## Stack
+
+- **Backend**: Symfony 8.1 / PHP 8.5, Doctrine ORM
+- **Front**: Twig, Symfony UX (Live Components, Turbo, Dropzone, Icons), AssetMapper, Tailwind v4
+- **Database**: PostgreSQL
+- **Background imports**: Messenger (Doctrine transport), progress pushed through Mercure
+- **Docker**: [symfony-docker](https://github.com/dunglas/symfony-docker) (FrankenPHP + Caddy, with the Mercure hub built in)
+
+## Requirements
+
+- Docker
+
+## Installation
+
+1. Start:
+
+   ```bash
+   make start
+   ```
+
+2. Create a user:
+
+   ```bash
+   docker compose exec php bin/console app:create-user
+   ```
+
+3. Open <https://localhost> and accept the local certificate.
+
+## Commands
+
+`make help` lists everything. The main ones:
+
+- `make start` / `make up` / `make down`: Docker lifecycle
+- `make logs`: logs
+- `make bash`: shell in the PHP container
+- `make sf c="debug:router"`: Symfony console
+- `make migrate`: Doctrine migrations
+
+## Quality
+
+- `make rector-fix` then `make cs-fix`: automatic fixes (in that order)
+- `make phpstan-check`: static analysis
+- `make phpunit`: tests
+- `make ci`: run everything
+
+## Release
+
+Push a `v1.2.3` tag: the Docker workflow runs the CI, then publishes `smbpunt/cashew-php-prod:1.2.3` and `latest` on Docker Hub (amd64 and arm64).
 
 ## License
 
-Symfony Docker is available under the MIT License.
-
-## Credits
-
-Created by [Kévin Dunglas](https://dunglas.dev), co-maintained by [Maxime Helias](https://twitter.com/maxhelias) and sponsored by [Les-Tilleuls.coop](https://les-tilleuls.coop).
+MIT
