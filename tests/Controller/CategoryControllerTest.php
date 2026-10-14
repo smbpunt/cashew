@@ -149,6 +149,16 @@ final class CategoryControllerTest extends WebTestCase
         self::assertCount(1, $component->render()->crawler()->filter('summary [data-icon=""]'));
     }
 
+    public function testTheFormEmptiedAfterCreatingShowsNoError(): void
+    {
+        $component = $this->createLiveComponent(CategoryForm::class, client: $this->client)->actingAs($this->user);
+        $component->submitForm(['category' => ['name' => 'Energy']], 'save');
+        // Heard back by the form itself, as the browser does, for its select of parents to offer the category
+        $component->emit('category:created', ['id' => 1]);
+
+        self::assertCount(0, $component->render()->crawler()->filter('[aria-invalid="true"]'));
+    }
+
     public function testCategoriesHaveTwoLevelsAtMost(): void
     {
         $home = $this->createCategory($this->user, 'Home');

@@ -45,7 +45,10 @@ final class CategoryForm extends AbstractController
         $this->entityManager->persist($category);
         $this->entityManager->flush();
 
+        // Empty for the next one, and not validated yet: resetForm() keeps it validated, which would show the empty name
+        // as blank at the next render, the one the event brings first
         $this->resetForm();
+        $this->isValidated = false;
         $this->emit('category:created', ['id' => $category->getId()]);
     }
 
