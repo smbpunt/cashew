@@ -1,7 +1,7 @@
 <nav {{ attributes.defaults({class: 'flex items-center gap-1', 'aria-label': 'locale.switcher'|trans}) }}>
     {% for locale in app.enabled_locales %}
         <form method="post" action="{{ path('app_locale', {locale: locale, target: app.request.requestUri}) }}">
-            <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
+            <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('locale') }}">
             <twig:Button
                 type="submit"
                 variant="ghost"

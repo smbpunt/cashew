@@ -74,8 +74,8 @@ final class SeedCategoriesOnLoginTest extends WebTestCase
 
     private function logIn(string $button): void
     {
-        $this->client->request('GET', '/login');
-        $this->client->submitForm($button, ['_username' => 'alice', '_password' => self::PASSWORD]);
+        $crawler = $this->client->request('GET', '/login');
+        $this->submitLikeABrowser($this->client, $crawler, $button, ['_username' => 'alice', '_password' => self::PASSWORD]);
         self::assertResponseRedirects('/dashboard');
     }
 

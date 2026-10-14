@@ -11,6 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class LocaleControllerTest extends WebTestCase
 {
@@ -43,6 +44,26 @@ final class LocaleControllerTest extends WebTestCase
         $client->submitForm('en');
         $client->followRedirect();
         self::assertSelectorTextContains('h1', 'Sign in');
+    }
+
+    public function testSwitchesOnceSignedInThroughTheForm(): void
+    {
+        $client = self::createClient();
+        $this->resetDatabase();
+        $user = $this->createUser('alice');
+        $user->setPassword(self::getContainer()->get(UserPasswordHasherInterface::class)->hashPassword($user, 'secret'));
+        $this->entityManager->flush();
+
+        // The login form double-submits its token: from then on, the session expects every token double-submitted
+        $crawler = $client->request('GET', '/login');
+        $this->submitLikeABrowser($client, $crawler, 'Sign in', ['_username' => 'alice', '_password' => 'secret']);
+        $crawler = $client->followRedirect();
+
+        $this->submitLikeABrowser($client, $crawler, 'fr');
+        self::assertResponseRedirects();
+
+        $crawler = $client->followRedirect();
+        self::assertSame('fr', $crawler->filter('html')->attr('lang'));
     }
 
     public function testSwitchingTakesAToken(): void

@@ -23,7 +23,7 @@ final class LocaleController extends AbstractController
      * @param list<string> $enabledLocales
      */
     #[Route('/locale/{locale}', name: 'app_locale', methods: ['POST'])]
-    #[IsCsrfTokenValid('locale')]
+    #[IsCsrfTokenValid('locale', tokenKey: '_csrf_token')]
     public function switch(
         string $locale,
         Request $request,
