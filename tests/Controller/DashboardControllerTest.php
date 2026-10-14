@@ -53,6 +53,7 @@ final class DashboardControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'No data yet');
         self::assertSelectorCount(3, 'header [data-controller="theme"] button[aria-pressed]');
+        self::assertSelectorExists('header a[href="/dashboard"] svg[aria-hidden="true"]');
         self::assertSelectorNotExists('[data-live-name-value="ImportsInProgress"]');
 
         $this->client->clickLink('Import statements');

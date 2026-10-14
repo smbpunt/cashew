@@ -44,4 +44,17 @@ final class HomeControllerTest extends WebTestCase
         self::assertSame('en', $crawler->filter('html')->attr('lang'));
         self::assertStringContainsString('width=device-width', (string) $crawler->filter('meta[name="viewport"]')->attr('content'));
     }
+
+    public function testServesTheFaviconAndTheAppleTouchIcon(): void
+    {
+        $client = self::createClient();
+        $crawler = $client->request('GET', '/');
+
+        foreach (['link[rel="icon"]' => 'image/svg+xml', 'link[rel="apple-touch-icon"]' => 'image/png'] as $link => $type) {
+            $client->request('GET', (string) $crawler->filter($link)->attr('href'));
+
+            self::assertResponseIsSuccessful();
+            self::assertResponseHeaderSame('Content-Type', $type);
+        }
+    }
 }

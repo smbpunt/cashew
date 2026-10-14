@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <mask id="cashew-nut">
+    <rect width="64" height="64" fill="#fff"/>
+    <path d="M43.6 19.5A15 15 0 1 0 41.5 44" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="41.5" cy="44" r="8.5"/>
+  </mask>
+  <rect width="64" height="64" rx="14" mask="url(#cashew-nut)"/>
+</svg>
