@@ -164,6 +164,8 @@ review:
         description: 'Filed in "{name}". Those between your accounts are left out of income and spending; those to someone else count as spending. File one elsewhere if it''s something else, like rent.'
         internal: Between your accounts
         external: To someone else
+        show: '{count, plural, one {Show the transfer} other {Show the # transfers}}'
+        hide: '{count, plural, one {Hide the transfer} other {Hide the transfers}}'
     categories:
         title: Categories
         description: 'Group what you spend on: Home, with its energy, water and loan…'

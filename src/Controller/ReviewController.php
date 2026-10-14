@@ -18,8 +18,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ReviewController extends AbstractController
 {
     /**
-     * What the imports asked for brought, the transfers among it, then the recurring series waiting for a review, and
-     * the categories to file them in.
+     * The categories to file things in, what the imports asked for brought, the recurring series waiting for a review,
+     * then the transfers among what was brought.
      *
      * @param list<int> $imports the imports just done, if any
      */

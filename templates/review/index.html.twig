@@ -21,6 +21,21 @@
     <twig:Button as="a" href="{{ path('app_dashboard') }}">{{ 'review.continue'|trans }}</twig:Button>
 </div>
 
+<section aria-labelledby="new-category">
+    <twig:Card>
+        <twig:Card:Header>
+            <twig:Card:Title><h2 id="new-category">{{ 'review.categories.title'|trans }}</h2></twig:Card:Title>
+            <twig:Card:Description>{{ 'review.categories.description'|trans }}</twig:Card:Description>
+        </twig:Card:Header>
+        <twig:Card:Content class="flex flex-col gap-4">
+            {% if not has_categories %}
+                {{ include('category/_seed.html.twig', {from: 'review'}) }}
+            {% endif %}
+            <twig:CategoryForm />
+        </twig:Card:Content>
+    </twig:Card>
+</section>
+
 {% if imports is not empty %}
     <section aria-labelledby="imports" class="flex flex-col gap-3">
         <div class="flex flex-col gap-1">
@@ -62,6 +77,8 @@
     </section>
 {% endif %}
 
+<twig:PendingSeries />
+
 {% if transfers is not empty %}
     <section aria-labelledby="transfers">
         <twig:Card class="gap-0 py-0">
@@ -69,46 +86,39 @@
                 <h2 id="transfers" class="font-semibold">{{ 'review.transfers.title'|trans({count: transfers|length}) }}</h2>
                 <p class="text-sm text-muted-foreground">{{ 'review.transfers.description'|trans({name: (transfers|first).category.name}) }}</p>
             </div>
-            <ul class="divide-y">
-                {% for transaction in transfers %}
-                    <li class="flex items-start gap-4 px-4 py-3 sm:px-6" data-transfer>
-                        <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">
-                            {{- transaction.date|format_date(pattern: 'd MMM') -}}
-                        </time>
-                        <div class="flex min-w-0 flex-1 flex-col gap-1">
-                            <p class="text-sm font-medium break-words">{{ transaction.oneLineLabel }}</p>
-                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                <span>{{ transaction.account.label }}</span>
-                                {% if transaction.internalTransfer %}
-                                    <twig:Badge variant="secondary" data-internal>{{ 'review.transfers.internal'|trans }}</twig:Badge>
-                                {% else %}
-                                    <twig:Badge variant="outline">{{ 'review.transfers.external'|trans }}</twig:Badge>
-                                {% endif %}
-                                <twig:TransactionCategory :transaction="transaction" key="transfer-category-{{ transaction.id }}" />
+            {# Folded: a few months bring hundreds of them, which would push the rest down #}
+            <details class="group" data-transfers>
+                <summary class="flex cursor-pointer list-none px-4 py-3 sm:px-6 [&::-webkit-details-marker]:hidden">
+                    <span class="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline">
+                        {{ ux_icon('lucide:chevron-down', {'aria-hidden': 'true', class: 'size-4 transition-transform group-open:rotate-180'}) }}
+                        <span class="group-open:hidden">{{ 'review.transfers.show'|trans({count: transfers|length}) }}</span>
+                        <span class="hidden group-open:inline">{{ 'review.transfers.hide'|trans({count: transfers|length}) }}</span>
+                    </span>
+                </summary>
+                <ul class="divide-y border-t">
+                    {% for transaction in transfers %}
+                        <li class="flex items-start gap-4 px-4 py-3 sm:px-6" data-transfer>
+                            <time datetime="{{ transaction.date|date('Y-m-d') }}" class="w-12 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">
+                                {{- transaction.date|format_date(pattern: 'd MMM') -}}
+                            </time>
+                            <div class="flex min-w-0 flex-1 flex-col gap-1">
+                                <p class="text-sm font-medium break-words">{{ transaction.oneLineLabel }}</p>
+                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                    <span>{{ transaction.account.label }}</span>
+                                    {% if transaction.internalTransfer %}
+                                        <twig:Badge variant="secondary" data-internal>{{ 'review.transfers.internal'|trans }}</twig:Badge>
+                                    {% else %}
+                                        <twig:Badge variant="outline">{{ 'review.transfers.external'|trans }}</twig:Badge>
+                                    {% endif %}
+                                    <twig:TransactionCategory :transaction="transaction" key="transfer-category-{{ transaction.id }}" />
+                                </div>
                             </div>
-                        </div>
-                        <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
-                    </li>
-                {% endfor %}
-            </ul>
+                            <twig:Money :amount="transaction.amount" :currency="transaction.currency" signed class="text-sm font-medium" />
+                        </li>
+                    {% endfor %}
+                </ul>
+            </details>
         </twig:Card>
     </section>
 {% endif %}
-
-<twig:PendingSeries />
-
-<section aria-labelledby="new-category">
-    <twig:Card>
-        <twig:Card:Header>
-            <twig:Card:Title><h2 id="new-category">{{ 'review.categories.title'|trans }}</h2></twig:Card:Title>
-            <twig:Card:Description>{{ 'review.categories.description'|trans }}</twig:Card:Description>
-        </twig:Card:Header>
-        <twig:Card:Content class="flex flex-col gap-4">
-            {% if not has_categories %}
-                {{ include('category/_seed.html.twig', {from: 'review'}) }}
-            {% endif %}
-            <twig:CategoryForm />
-        </twig:Card:Content>
-    </twig:Card>
-</section>
 {% endblock %}

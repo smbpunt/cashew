@@ -81,6 +81,9 @@ final class ReviewControllerTest extends WebTestCase
         self::assertSelectorTextContains('[data-nav-review]', '2');
         // No categories yet: a first set is offered
         self::assertSelectorExists('form[action="/categories/seed?from=review"]');
+        // The categories come first, ready before the series to file in them
+        $page = (string) $this->client->getResponse()->getContent();
+        self::assertLessThan(strpos($page, 'id="imports"'), strpos($page, 'id="new-category"'));
     }
 
     public function testShowsTheFirstAndLastDaysOfWhatEachImportBrought(): void
@@ -128,6 +131,11 @@ final class ReviewControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('#transfers', '2 transfers');
+        // Below the recurring series, which matter more, and folded until asked for
+        $page = (string) $this->client->getResponse()->getContent();
+        self::assertLessThan(strpos($page, 'id="transfers"'), strpos($page, 'data-live-name-value="PendingSeries"'));
+        self::assertSelectorExists('details[data-transfers]:not([open]) [data-transfer]');
+        self::assertSelectorTextContains('details[data-transfers] summary', 'Show the 2 transfers');
         self::assertSelectorTextContains('[data-transfer]:first-child', 'Virement émis · VIR INST vers Revolut');
         self::assertSelectorTextContains('[data-transfer]:first-child [data-internal]', 'Between your accounts');
         self::assertSelectorTextContains('[data-transfer]:last-child', 'To someone else');

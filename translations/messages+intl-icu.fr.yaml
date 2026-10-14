@@ -164,6 +164,8 @@ review:
         description: 'Rangés dans « {name} ». Ceux entre vos comptes ne comptent ni en entrées ni en sorties ; ceux vers un tiers comptent en sorties. Rangez-en un ailleurs si c’est autre chose, un loyer par exemple.'
         internal: Entre vos comptes
         external: Vers un tiers
+        show: '{count, plural, one {Afficher le virement} other {Afficher les # virements}}'
+        hide: '{count, plural, one {Masquer le virement} other {Masquer les virements}}'
     categories:
         title: Catégories
         description: 'Regroupez vos dépenses : Maison, avec son énergie, son eau, son prêt…'
