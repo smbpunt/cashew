@@ -73,6 +73,9 @@ jobs:
             echo "::endgroup::"
             exit 1
           }
+      # The pages link the built CSS: without it, every page fails to render
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
       - name: Run PHPUnit
         run: vendor/bin/phpunit
 
