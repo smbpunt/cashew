@@ -49,6 +49,16 @@ final class StatementUploadTest extends WebTestCase
         self::assertStringContainsString('dropzone-container', $rendered);
     }
 
+    public function testTellsItIsUploadingThroughTheHiddenAttribute(): void
+    {
+        $button = $this->component()->render()->crawler()->filter('button[type="submit"]');
+
+        // Tailwind hides [hidden] with !important: the inline display of data-loading="show" can't reveal it
+        self::assertCount(0, $button->filter('[data-loading="show"], [data-loading="hide"]'));
+        self::assertSame('Import', trim($button->filter('[data-loading="addAttribute(hidden)"]:not([hidden])')->text()));
+        self::assertSame('Uploading…', trim($button->filter('[data-loading="removeAttribute(hidden)"][hidden]')->text()));
+    }
+
     public function testUploadsStatementsThenFollowsTheirImportsUntilTheyAreDone(): void
     {
         $component = $this->upload($this->component(), $this->file('credit_agricole.csv'), $this->file('revolut.csv'));

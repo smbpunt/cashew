@@ -64,9 +64,13 @@
             </twig:Alert>
         {% endif %}
 
+        {# The hidden attribute rather than show/hide, whose inline display loses to Tailwind's [hidden] { display: none !important } #}
         <twig:Button type="submit" class="self-start" data-loading="addAttribute(disabled)">
-            <span data-loading="hide">{{ 'statement.upload.submit'|trans }}</span>
-            <span data-loading="show" hidden>{{ 'statement.upload.uploading'|trans }}</span>
+            <span data-loading="addAttribute(hidden)">{{ 'statement.upload.submit'|trans }}</span>
+            <span class="inline-flex items-center gap-1.5" data-loading="removeAttribute(hidden)" hidden>
+                {{ ux_icon('lucide:loader-circle', {class: 'motion-safe:animate-spin', 'aria-hidden': 'true'}) }}
+                {{ 'statement.upload.uploading'|trans }}
+            </span>
         </twig:Button>
     {{ form_end(this.form, {render_rest: false}) }}
     {% endif %}
